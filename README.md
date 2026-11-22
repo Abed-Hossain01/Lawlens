@@ -1,12 +1,46 @@
-# LawLens (ল-লেন্স) v1.0
-### Legal Document Auditing System for Bangladesh Property Transfers
+# Nothi AI (নথি এআই) v1.0
+### Legal Document Auditing & Statutory Vetting System for Bangladesh Property Transfers
 **By Team Boron at Pointfex**
 
-LawLens is an automated legal vetting system for Bangladeshi property transactions. It enables Legal Vetting Officers to ingest a document triad (**Saf Kabala Property Deed**, **RS/BS Khatian**, **National ID Card**), performs multimodal entity extraction, executes deterministic statutory checks, maps findings to verified legal sections, and renders an official vetting memorandum.
+Nothi AI (নথি এআই) is a deterministic legal document vetting and statutory risk auditing platform engineered specifically for Bangladeshi land and property transactions. Built for Legal Vetting Officers, bank credit risk teams, and property advocates, Nothi AI ingests the primary conveyance triad (**Saf Kabala Property Deed**, **Collectorate RS/BS Khatian**, and **National ID Card**), performs multimodal extraction, executes strict statutory parity checks, and enforces a zero-fabrication citation filter backed by our statutory corpus.
 
 ---
 
-## 1. Quick Start
+## 1. Key Capabilities & Architecture
+
+- **Interactive 3D Hero & Document Triad Simulation**:
+  - Registry-office desk 3D experience built with React Three Fiber, Three.js, and Drei.
+  - Scroll-driven simulation across 4 stages: Ingestion (fan out & lift) → Extraction (multimodal scanline) → Cross-audit (field alignment & mismatch detection) → Statutory verdict (physical stamp press).
+  - Graceful degradation on mobile (<768px) and strict `prefers-reduced-motion` compliance.
+
+- **Citation-Locked AI Chat ("Ask Nothi AI")**:
+  - **Shared State Architecture**: Persistent across pages via `ChatContext`, accessible via two synchronized entry points:
+    1. **Doorway Section**: Interactive full-width prompt bar with 4 suggested statutory inquiry chips immediately following the hero.
+    2. **Floating Launcher**: 56px brass launcher fixed at the bottom-right of every page with a 6-second attention pulse and expandable label.
+  - **Deterministic Statutory Grounding (SRS FR-4.2, NFR-1)**: Every response from the assistant is filtered through `filterValidCitations()`. Only citations existing in `laws_corpus.json` (28 sections across 4 Acts) can ever render as interactive chips; unverified or fabricated citations are stripped before rendering.
+  - **Out-of-Corpus Refusal**: When queried about unverified topics (tax clearances, non-land topics), the assistant explicitly refuses rather than hallucinating statutory law.
+
+- **3D Statutory Citation Gate**:
+  - CSS 3D transformed registry checkpoint demonstrating live filtering of 4 sample citations (`reg_1908_sec23`, `tp_1882_sec52`, `land_crime_2023_sec4`, and fabricated `reg_1908_sec999_fake_clause`).
+  - Interactive card catalog drawers opening verbatim statutory text in the inspection modal.
+
+- **Transparent Three-Tier Pricing**:
+  - Dedicated `/pricing` route and landing page pricing section with monthly/yearly billing (20% discount).
+  - 3 Tiers: **Basic** (pay-as-you-go title verification), **Plus** (high-volume title vetting with audit certificates), and **Pro** (unlimited multi-office banking API).
+  - Sticky feature comparison matrix and 6-item accessible FAQ accordion.
+
+- **`/audit` Dual-Pane Workspace**:
+  - **Left Pane**: Multimodal document viewer with document switcher tabs (Deed, Khatian, NID), zoom/page controls, and live synchronized bounding-box highlighting.
+  - **Right Pane**:
+    1. **Intake Section**: File drag-and-drop zone with pre-loaded benchmark loaders for **Packet A (Compliant)** and **Packet B (3 Planted Defects)**.
+    2. **Entity Comparison Matrix**: Cross-document entity comparison table with bilingual Bangla/English text.
+    3. **Risk Flags**: Red / Amber / Green statutory flags with shape badges (`▲ [CRITICAL DEFECT]`, `◆ [STATUTORY WARNING]`, `■ [STATUTORY COMPLIANCE]`).
+    4. **Citation Inspector**: Drawer with verbatim statutory text from `laws_corpus.json`.
+    5. **Vetting Memorandum**: Official attestation document with inline statutory citation chips, verdict seal, and `@media print` stylesheet.
+
+---
+
+## 2. Quick Start
 
 ### Prerequisites
 - Node.js >= 22.12.0 (configured in `package.json` engines)
@@ -36,9 +70,9 @@ The application runs locally at `http://localhost:3000`.
 
 ---
 
-## 2. Deploying to Vercel
+## 3. Deploying to Vercel
 
-LawLens is a **Next.js 16 (App Router) + React 19** application with strict TypeScript. To deploy to Vercel:
+Nothi AI is a **Next.js 16 (App Router) + React 19** application with strict TypeScript. To deploy to Vercel:
 
 1. **Framework Preset**: Select **Next.js** (auto-detected).
 2. **Node.js Version**: In Vercel Project Settings → General → Node.js Version, select **22.x** (compatible with `"engines": { "node": ">=22.12.0" }`).
@@ -50,67 +84,53 @@ LawLens is a **Next.js 16 (App Router) + React 19** application with strict Type
 
 ---
 
-## 2. System Architecture & Pages
+## 4. Connecting the Backend APIs
 
-- **`/` (Landing Page)**: 
-  - Registry-office desk 3D experience (built with Three.js / React Three Fiber / Drei).
-  - 4-step scroll-driven simulation: Ingestion (fan out & lift) → Extraction (multimodal scanline) → Cross-document audit (field alignment & mismatch detection) → Statutory verdict (physical stamp press).
-  - Automatic graceful degradation on mobile (<768px) and strict `prefers-reduced-motion` compliance via 2D diagnostic fallback.
-  - Pipeline strip covering the 5 stages from the SRS.
-  - Phase 1 statutory coverage specifications and CTA to the audit workspace.
-- **`/audit` (Audit Workspace)**:
-  - **Left Pane**: Multimodal document viewer with document switcher tabs (Deed, Khatian, NID), zoom/page controls, and live bounding-box highlighting synchronized with risk flags.
-  - **Right Pane**:
-    1. **Intake Section**: Drag-and-drop zone (PDF, JPG, PNG, max 15MB each, up to 3 files), plain-language validation alerts, manual document classifier, and one-click benchmark loaders for **Packet A (Compliant)** and **Packet B (3 Planted Defects)**.
-    2. **Entity Comparison Matrix**: Cross-document entity comparison table with bilingual Bangla/English text and clear mismatch highlighting.
-    3. **Risk Flags**: Red / Amber / Green statutory flags with shape badges (`▲ [CRITICAL DEFECT]`, `◆ [STATUTORY WARNING]`, `■ [STATUTORY COMPLIANCE]`) ensuring non-reliance on color alone.
-    4. **Citation Inspector**: Drawer with verbatim statutory text from `laws_corpus.json` and supporting rule metadata.
-    5. **Vetting Memorandum**: Official attestation document with inline statutory citation chips, verdict seal, and a `@media print` stylesheet.
-    6. **Pipeline Progress State**: Calm inline progress sequence showing the 5 stages within the 18-second SLA (NFR-2).
-- **Shared Shell**:
-  - Header with navigation and live **EN / BN** bilingual toggle.
-  - Footer with credit: `LawLens v1.0, Team Boron, Pointfex`.
+### A. Document Auditing (`src/lib/api.ts`)
+The audit workspace interacts with the backend through `src/lib/api.ts`. To connect to a live FastAPI backend:
+1. Set `NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1` in `.env.local`.
+2. Update `runAudit()` in `src/lib/api.ts` to `POST` files as `FormData` to `/audit/run`.
 
----
-
-## 3. How to Connect the FastAPI Backend
-
-The frontend is built against an isolated API abstraction layer in `src/lib/api.ts`. Swapping from the mock layer to the live FastAPI backend is a **single-file change** in `src/lib/api.ts`.
-
-### Steps:
-1. Set your backend URL in `.env.local`:
-   ```env
-   NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
-   ```
-2. In `src/lib/api.ts`, update `runAudit` to call the FastAPI endpoint:
+### B. Citation-Locked Chat (`src/lib/chat.ts`)
+The AI Chat client is abstracted in `src/lib/chat.ts`. To connect to a live streaming FastAPI endpoint:
+1. Replace `mockChatStream` in `src/lib/chat.ts` with a `fetch` call to `POST /api/chat`:
    ```typescript
-   export async function runAudit(
-     bundle: AuditBundle,
-     onProgress?: (progress: PipelineProgress) => void
-   ): Promise<AuditResult> {
-     const formData = new FormData();
-     // Append uploaded files or packet benchmark flags
-     bundle.files.forEach((file) => {
-       // if file has File object: formData.append('files', file);
-     });
-
-     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/audit/run`, {
+   export async function sendChatMessage(
+     messages: { role: string; content: string }[],
+     onToken: (token: string) => void,
+     signal?: AbortSignal
+   ): Promise<ChatStreamResponse> {
+     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
        method: 'POST',
-       body: formData,
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ messages }),
+       signal,
      });
 
-     if (!response.ok) {
-       throw new Error(`Audit failed with status ${response.status}`);
+     const reader = response.body?.getReader();
+     const decoder = new TextDecoder();
+     let fullText = '';
+     let citations: string[] = [];
+
+     while (reader) {
+       const { done, value } = await reader.read();
+       if (done) break;
+       const chunk = decoder.decode(value);
+       // Parse SSE or streaming tokens and invoke onToken(token)
      }
 
-     return await response.json();
+     return {
+       fullText,
+       // Strictly filter citations against laws_corpus.json
+       validCitations: filterValidCitations(citations),
+       allCitations: citations,
+     };
    }
    ```
-3. Update `uploadBundle` and `getCorpusSection` to point to `/audit/upload` and `/corpus/{id}` respectively.
 
 ---
 
-## 4. File Manifest
+## 5. File Manifest
 
 ```
 LawLens/
@@ -118,12 +138,22 @@ LawLens/
 │   ├── app/
 │   │   ├── audit/
 │   │   │   └── page.tsx              # Audit workspace page (split screen)
+│   │   ├── pricing/
+│   │   │   └── page.tsx              # Dedicated /pricing route
 │   │   ├── globals.css               # Design tokens, registry palette, print rules
-│   │   ├── layout.tsx                # Root layout with fonts & LangProvider
-│   │   └── page.tsx                  # Landing page (hero, pipeline, phase 1)
+│   │   ├── layout.tsx                # Root layout with ChatProvider & launcher
+│   │   └── page.tsx                  # Landing page (hero, chat doorway, roadmap, pricing)
 │   ├── components/
 │   │   ├── Header.tsx                # Global navigation & EN/BN switcher
-│   │   ├── Footer.tsx                # Official footer & credit
+│   │   ├── Footer.tsx                # Official footer & credit (Nothi AI v1.0)
+│   │   ├── Logo.tsx                  # Bespoke dossier folder + lens SVG logo
+│   │   ├── chat/
+│   │   │   ├── AskNothiSection.tsx   # Entry point B: landing page chat doorway
+│   │   │   ├── ChatDrawer.tsx        # Right-side drawer / mobile sheet with streaming
+│   │   │   └── ChatFloatingLauncher.tsx # Entry point A: 56px bottom-right button
+│   │   ├── pricing/
+│   │   │   ├── ContactModal.tsx      # Request Access & Demo contact modal
+│   │   │   └── PricingSection.tsx    # 3-tier pricing cards, comparison table, FAQ
 │   │   ├── audit/
 │   │   │   ├── CitationChip.tsx      # Citation badge with integrity validation
 │   │   │   ├── CitationDrawer.tsx    # Statutory section inspector side-drawer
@@ -134,19 +164,28 @@ LawLens/
 │   │   │   ├── RiskFlags.tsx         # Red/Amber/Green flags with shapes & text
 │   │   │   └── VettingMemo.tsx       # Printable official vetting memorandum
 │   │   └── landing/
-│   │       ├── DeskScene.tsx         # 3D Three.js registry desk scene
-│   │       ├── Hero3DSection.tsx     # Scroll-driven hero container
-│   │       ├── ReducedMotionFallback.tsx # 2D fallback for mobile & prefers-reduced-motion
-│   │       └── RegistryDeskCanvas.tsx# React Three Fiber canvas wrapper
+│   │       ├── AudienceSection.tsx   # Who it's for (Advocates, Banks, Developers)
+│   │       ├── FinalCtaSection.tsx   # Pre-footer conversion call to action
+│   │       ├── FiveStagesFlow.tsx    # 5-stage serpentine roadmap
+│   │       ├── Hero3DSection.tsx     # Pinned 3D registry desk hero container
+│   │       └── citation-gate/        # CSS 3D citation checkpoint & modal
+│   ├── config/
+│   │   └── plans.ts                  # Pricing tier matrix & TODO price markers
+│   ├── context/
+│   │   └── ChatContext.tsx           # Shared chat state across entry points
 │   ├── data/
 │   │   └── laws_corpus.json          # 28 statutory sections (verified Sec. 23 + placeholders)
 │   ├── lib/
 │   │   ├── __tests__/
-│   │   │   └── citations.test.ts     # Vitest unit test for NFR-1 citation filter
+│   │   │   ├── citations.test.ts     # Vitest unit test for NFR-1 citation filter
+│   │   │   └── chat.test.ts          # Vitest unit tests for chat grounding & refusal
 │   │   ├── api.ts                    # Single API client interface
+│   │   ├── chat.ts                   # Chat client interface & citation lock
 │   │   ├── citations.ts              # Citation verification & corpus lookups
+│   │   ├── contact.ts                # Contact & demo request client
 │   │   └── lang.tsx                  # EN/BN bilingual context & dictionary
 │   ├── mocks/
+│   │   ├── chat.ts                   # Deterministic chat reasoning engine
 │   │   └── packets.ts                # Benchmark Packet A & Packet B data
 │   └── types/
 │       └── index.ts                  # TypeScript definitions (AuditResult, Flag, etc.)
@@ -158,13 +197,14 @@ LawLens/
 
 ---
 
-## 5. Placeholders to Replace with Real Data
+## 6. Placeholders to Replace with Real Data
 
-When the FastAPI backend and final legal corpus are ready, update the following placeholders:
+Before official commercial deployment, replace the following placeholders:
 
 | Item | File Location | Description |
 |---|---|---|
-| **27 Statutory Sections** | `src/data/laws_corpus.json` | Section 23 of Registration Act 1908 is verified. The other 27 sections (Registration Act 17, 24, 25, 28, 32, 47, 49, 52; TPA 3, 6, 7, 10, 17, 52, 54, 55; LCPRA 3, 4, 5, 6, 7, 8, 9; NIDW Rules 3, 4, 5, 6) have clearly marked text: `PLACEHOLDER: replace with verified text from laws_corpus.json (28 sections)`. Replace with verified statutory text from the legal corpus. |
-| **Document Bounding Boxes** | `src/types/index.ts` & `src/components/audit/DocumentViewer.tsx` | Currently uses representative bounding box coordinates for Deed, Khatian, and NID defect regions. Replace with normalized bounding boxes `[ymin, xmin, ymax, xmax]` provided by the backend's multimodal extraction service. |
-| **API Endpoints** | `src/lib/api.ts` | Replace simulated delays and mock objects in `runAudit()`, `uploadBundle()`, and `getCorpusSection()` with live FastAPI fetch/Axios requests. |
-| **Document Scan Assets** | `src/components/audit/DocumentViewer.tsx` | Replace mock vector-rendered SVG/HTML deed sheets with high-resolution scanned PDFs/TIFFs once ingested from the live file store (e.g. S3 / MinIO). |
+| **Subscription Prices** | `src/config/plans.ts` | Basic, Plus, and Pro tiers currently contain `"TODO: set real price"`. Replace with approved BDT subscription rates. |
+| **27 Statutory Sections** | `src/data/laws_corpus.json` | Section 23 of Registration Act 1908 is verified. The other 27 sections (Registration Act 17, 24, 25, 28, 32, 47, 49, 52; TPA 3, 6, 7, 10, 17, 52, 54, 55; LCPRA 3, 4, 5, 6, 7, 8, 9; NIDW Rules 3, 4, 5, 6) have clearly marked text: `PLACEHOLDER: replace with verified text from laws_corpus.json (28 sections)`. Replace with verified statutory text from the legal gazette. |
+| **Document Bounding Boxes** | `src/types/index.ts` & `src/components/audit/DocumentViewer.tsx` | Replace representative mock coordinates with normalized bounding boxes `[ymin, xmin, ymax, xmax]` provided by the backend multimodal extraction model. |
+| **Document Scans** | `src/components/audit/DocumentViewer.tsx` | Replace mock vector-rendered SVG/HTML deed sheets with high-resolution scanned PDFs/TIFFs once ingested from the live file store. |
+| **Backend Endpoints** | `src/lib/api.ts` & `src/lib/chat.ts` | Point to live FastAPI endpoints for audit pipeline execution and token-streamed chat completion. |

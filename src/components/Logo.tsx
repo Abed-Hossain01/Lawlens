@@ -8,7 +8,7 @@ interface LogoProps {
 export function Logo({ className = '' }: LogoProps) {
   return (
     <div className={`flex items-center gap-3 select-none ${className}`}>
-      {/* ── ORIGINAL INLINE SVG MARK: INSPECTION LENS OVER REGISTRY DEED CORNER ── */}
+      {/* ── ORIGINAL INLINE SVG MARK: DOSSIER FILE FOLDER ("NOTHI") WITH INSPECTION LENS ── */}
       <div className="relative flex items-center justify-center shrink-0">
         <svg
           width="38"
@@ -19,93 +19,89 @@ export function Logo({ className = '' }: LogoProps) {
           className="transition-transform duration-200 group-hover:scale-105"
           aria-hidden="true"
         >
-          {/* Document parchment foundation with folded corner */}
+          {/* Back folder silhouette with top tab */}
           <path
-            d="M8 5.5C8 4.67 8.67 4 9.5 4H24.5L32 11.5V34.5C32 35.33 31.33 36 30.5 36H9.5C8.67 36 8 35.33 8 34.5V5.5Z"
-            fill="rgba(27, 67, 50, 0.08)"
+            d="M6 9C6 7.89543 6.89543 7 8 7H16.5C17.3 7 18.05 7.32 18.6 7.88L20.8 10.1H32C33.1046 10.1 34 10.9954 34 12.1V31C34 32.1046 33.1046 33 32 33H8C6.89543 33 6 32.1046 6 31V9Z"
+            fill="rgba(27, 67, 50, 0.14)"
             stroke="#1b4332"
             strokeWidth="1.8"
             strokeLinejoin="round"
           />
 
-          {/* Folded corner flap */}
+          {/* Clean archival document sheet protruding from folder */}
           <path
-            d="M24.5 4V11.5H32"
-            fill="rgba(176, 141, 87, 0.2)"
+            d="M10 13C10 12.4477 10.4477 12 11 12H28C28.5523 12 29 12.4477 29 13V28H10V13Z"
+            fill="#faf7f2"
             stroke="#1b4332"
-            strokeWidth="1.8"
-            strokeLinejoin="round"
+            strokeWidth="1.2"
           />
 
-          {/* Internal simulated text lines on deed */}
+          {/* Micro text lines on document sheet */}
           <line
-            x1="12"
+            x1="13"
             y1="16"
-            x2="17"
+            x2="23"
             y2="16"
-            stroke="rgba(27, 67, 50, 0.45)"
-            strokeWidth="1.5"
+            stroke="rgba(27, 67, 50, 0.4)"
+            strokeWidth="1.2"
             strokeLinecap="round"
           />
           <line
-            x1="12"
-            y1="20"
-            x2="15"
-            y2="20"
-            stroke="rgba(27, 67, 50, 0.45)"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-
-          {/* Brass Optical Inspection Lens Ring */}
-          <circle
-            cx="21"
-            cy="24"
-            r="8"
-            fill="rgba(250, 247, 242, 0.95)"
-            stroke="#b08d57"
-            strokeWidth="2.2"
-          />
-
-          {/* Internal reticle crosshair inside lens */}
-          <line
-            x1="21"
+            x1="13"
             y1="19.5"
-            x2="21"
-            y2="28.5"
-            stroke="#b08d57"
-            strokeWidth="1"
+            x2="20"
+            y2="19.5"
+            stroke="rgba(27, 67, 50, 0.4)"
+            strokeWidth="1.2"
             strokeLinecap="round"
-            opacity="0.85"
-          />
-          <line
-            x1="16.5"
-            y1="24"
-            x2="25.5"
-            y2="24"
-            stroke="#b08d57"
-            strokeWidth="1"
-            strokeLinecap="round"
-            opacity="0.85"
           />
 
-          {/* Precision Brass Lens Handle */}
+          {/* Front folder flap */}
           <path
-            d="M27 30L33.5 36.5"
+            d="M6 18C6 16.8954 6.89543 16 8 16H32C33.1046 16 34 16.8954 34 18V31C34 32.1046 33.1046 33 32 33H8C6.89543 33 6 32.1046 6 31V18Z"
+            fill="#1b4332"
+            fillOpacity="0.08"
+            stroke="#1b4332"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+
+          {/* Brass Optical Inspection Loupe & Verification Symbol */}
+          <circle
+            cx="24"
+            cy="24"
+            r="6.5"
+            fill="#faf7f2"
             stroke="#b08d57"
-            strokeWidth="2.6"
+            strokeWidth="2"
+          />
+
+          {/* Checkmark inside verification lens */}
+          <path
+            d="M21.5 24L23.2 25.8L26.5 22.2"
+            stroke="#1b4332"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {/* Brass Lens Handle extending diagonally */}
+          <path
+            d="M28.5 28.5L33 33"
+            stroke="#b08d57"
+            strokeWidth="2.4"
             strokeLinecap="round"
           />
         </svg>
       </div>
 
-      {/* ── WORDMARK: LAWLENS (SERIF 24PX IN DEEP GREEN) + BANGLA ON SAME BASELINE ── */}
+      {/* ── WORDMARK: NOTHI AI (SERIF 24PX IN DEEP GREEN) + BANGLA ON SAME BASELINE ── */}
       <div className="flex items-baseline gap-2">
         <span className="font-heading text-2xl font-bold tracking-tight text-green-deep">
-          LawLens
+          Nothi AI
         </span>
         <span className="font-bangla text-lg sm:text-xl font-medium text-brass">
-          ল-লেন্স
+          নথি এআই
         </span>
       </div>
     </div>

@@ -1,14 +1,14 @@
 'use client';
 
-import Link from 'next/link';
-import { useLang } from '@/lib/lang';
 import { Hero3DSection } from '@/components/landing/Hero3DSection';
+import { AskNothiSection } from '@/components/chat/AskNothiSection';
 import { FiveStagesFlow } from '@/components/landing/FiveStagesFlow';
+import { AudienceSection } from '@/components/landing/AudienceSection';
 import { CitationGateSection } from '@/components/landing/citation-gate/CitationGateSection';
+import { PricingSection } from '@/components/pricing/PricingSection';
+import { FinalCtaSection } from '@/components/landing/FinalCtaSection';
 
 export default function HomePage() {
-  const { lang, t } = useLang();
-
   const pipelineStages = [
     {
       num: '01',
@@ -67,163 +67,25 @@ export default function HomePage() {
       {/* ── 1. HERO 3D SCENE: 400VH PINNED REGISTRY DESK ──────────── */}
       <Hero3DSection />
 
-      {/* ── 2. SECTION 1: FIVE STAGES SERPENTINE ROADMAP ──────────── */}
+      {/* ── 2. ENTRY POINT B: ASK NOTHI AI DOORWAY SECTION ───────── */}
+      <AskNothiSection />
+
+      {/* ── 3. FIVE STAGES SERPENTINE ROADMAP ────────────────────── */}
       <section id="how-it-works" className="border-b border-border bg-paper scroll-mt-20">
         <FiveStagesFlow stages={pipelineStages} />
       </section>
 
-      {/* ── 3. SECTION 2: 3D INTERACTIVE CITATION GATE CHECKPOINT ──── */}
+      {/* ── 4. WHO IT'S FOR: 3 SRS AUDIENCES WITH EDITORIAL TYPOGRAPHY */}
+      <AudienceSection />
+
+      {/* ── 5. 3D CITATION GATE & ZERO-FABRICATION CHECKPOINT ─────── */}
       <CitationGateSection />
 
-      {/* ── 4. SECTION 3: PHASE 1 REGISTRY INDEX WITH DOTTED LEADERS ─ */}
-      <section id="phase-1-scope" className="py-24 border-b border-border bg-paper scroll-mt-24">
-        <div className="max-w-[1280px] mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="border-b-2 border-green-deep pb-4 mb-12">
-            <span className="text-xs font-mono uppercase tracking-widest text-ink-muted">
-              Registry Gazette Scope • Phase 1
-            </span>
-            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-green-deep mt-1">
-              {lang === 'bn' ? 'প্রথম পর্যায়ের সংবিধিবদ্ধ পরিধি' : 'Phase 1 Statutory Index'}
-            </h2>
-            <p className="text-sm text-ink-muted mt-1.5 max-w-2xl font-sans leading-relaxed">
-              Three primary document types evaluated deterministically against four verified statutory corpora.
-            </p>
-          </div>
+      {/* ── 6. THREE-TIER PRICING & FAQ SECTION ───────────────────── */}
+      <PricingSection showFaq={true} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Column 1: Document Triad with Dotted Leaders */}
-            <div className="border border-border rounded-xs bg-paper-light p-6 shadow-sm">
-              <h3 className="font-heading text-lg font-bold text-green-deep mb-6 pb-2 border-b border-border">
-                1. Standard Document Triad
-              </h3>
-
-              <div className="space-y-5 font-sans text-sm">
-                <div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-bold text-ink">Saf Kabala Deed</span>
-                    <span className="flex-1 border-b border-dotted border-border-light mx-2" />
-                    <span className="font-mono text-xs text-green-deep font-bold">Property Deed</span>
-                  </div>
-                  <p className="text-xs text-ink-muted mt-1 pl-4">
-                    Sub-registry office deed vetting: seller, buyer, plot schedule, execution and registration timestamps.
-                  </p>
-                </div>
-
-                <div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-bold text-ink">RS / BS Khatian</span>
-                    <span className="flex-1 border-b border-dotted border-border-light mx-2" />
-                    <span className="font-mono text-xs text-green-deep font-bold">Record of Rights</span>
-                  </div>
-                  <p className="text-xs text-ink-muted mt-1 pl-4">
-                    Collectorate Record of Rights: verifying ownership history, mouza boundaries, and Dag plot numbers.
-                  </p>
-                </div>
-
-                <div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-bold text-ink">National ID Card</span>
-                    <span className="flex-1 border-b border-dotted border-border-light mx-2" />
-                    <span className="font-mono text-xs text-green-deep font-bold">Smart Card NID</span>
-                  </div>
-                  <p className="text-xs text-ink-muted mt-1 pl-4">
-                    Election Commission database parity: 10/13/17-digit format compliance, name matching, father name check.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Column 2: Statutory Acts with Dotted Leaders */}
-            <div className="border border-border rounded-xs bg-paper-light p-6 shadow-sm">
-              <h3 className="font-heading text-lg font-bold text-green-deep mb-6 pb-2 border-b border-border">
-                2. Statutory Corpus Verification
-              </h3>
-
-              <div className="space-y-5 font-sans text-sm">
-                <div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-bold text-ink">Registration Act, 1908</span>
-                    <span className="flex-1 border-b border-dotted border-border-light mx-2" />
-                    <span className="font-mono text-xs text-ink-muted">Sec. 17, 23, 24, 25, 28, 49</span>
-                  </div>
-                  <p className="text-xs text-ink-muted mt-1 pl-4">
-                    Compulsory registration requirements, 4-month presentation window, validity of transfers.
-                  </p>
-                </div>
-
-                <div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-bold text-ink">Transfer of Property Act, 1882</span>
-                    <span className="flex-1 border-b border-dotted border-border-light mx-2" />
-                    <span className="font-mono text-xs text-ink-muted">Sec. 3, 6, 7, 10, 52, 54, 55</span>
-                  </div>
-                  <p className="text-xs text-ink-muted mt-1 pl-4">
-                    Valid execution of sale deeds, competency of transferor, notice, pending suits (Lis Pendens).
-                  </p>
-                </div>
-
-                <div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-bold text-ink">Land Crime Prevention & Remedy Act, 2023</span>
-                    <span className="flex-1 border-b border-dotted border-border-light mx-2" />
-                    <span className="font-mono text-xs text-ink-muted">Sec. 3, 4, 5, 6, 7, 8, 9</span>
-                  </div>
-                  <p className="text-xs text-ink-muted mt-1 pl-4">
-                    Criminal penalties for forged deeds, deceptive plot mutations, and fraudulent land transfers.
-                  </p>
-                </div>
-
-                <div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-bold text-ink">National Identity Registration Rules (NIDW)</span>
-                    <span className="flex-1 border-b border-dotted border-border-light mx-2" />
-                    <span className="font-mono text-xs text-ink-muted">Rule 3, 4, 5, 6</span>
-                  </div>
-                  <p className="text-xs text-ink-muted mt-1 pl-4">
-                    Format validation for 10-digit smart cards, 13-digit legacy, and 17-digit national identity numbers.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 5. SECTION 4: FINAL CALL TO ACTION ─────────────────────── */}
-      <section className="py-28 bg-paper-light">
-        <div className="max-w-[1280px] mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="border-2 border-brass/60 p-8 sm:p-14 rounded-xs bg-paper shadow-xl flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
-            {/* Subtle double rule motif */}
-            <div className="absolute top-2 left-2 right-2 bottom-2 border border-border-light pointer-events-none" />
-
-            <div className="space-y-3 relative z-10 max-w-2xl">
-              <div className="font-mono text-xs uppercase tracking-widest text-green-mid font-bold">
-                Team Boron • Pointfex Land Intelligence
-              </div>
-              <h3 className="font-heading text-3xl sm:text-4xl font-bold text-green-deep">
-                {lang === 'bn'
-                  ? 'দলিল পরীক্ষণ কার্যক্ষেত্রে প্রবেশ করুন'
-                  : 'Launch the Audit Workspace'}
-              </h3>
-              <p className="text-sm text-ink-muted leading-relaxed font-sans">
-                {lang === 'bn'
-                  ? 'সাফ কবলা, আরএস খতিয়ান ও এনআইডি আপলোড করুন অথবা বেঞ্চমার্ক প্যাকেট লোড করে তাৎক্ষণিক নির্ণায়ক আইনি নিরীক্ষা পরিচালনা করুন।'
-                  : 'Upload Deed, Khatian and NID bundles or test against pre-loaded benchmark packets to inspect deterministic parity, live synchronized bounding boxes, and printable statutory memoranda.'}
-              </p>
-            </div>
-
-            <div className="shrink-0 relative z-10">
-              <Link
-                href="/audit"
-                className="inline-flex items-center gap-2.5 px-7 py-4 rounded-xs bg-green-deep text-paper font-mono text-xs font-bold uppercase tracking-wider hover:bg-green-mid transition-all shadow-lg active:scale-95 cursor-pointer"
-              >
-                <span>{t('hero.cta')}</span>
-                <span>→</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ── 7. FINAL CALL TO ACTION ───────────────────────────────── */}
+      <FinalCtaSection />
     </div>
   );
 }

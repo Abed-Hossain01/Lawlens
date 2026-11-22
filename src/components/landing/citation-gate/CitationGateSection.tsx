@@ -222,7 +222,7 @@ export function CitationGateSection() {
 
           <p className="text-base sm:text-lg text-ink-muted font-sans leading-relaxed">
             In property title vetting, fabricated statutory citations create fatal title liabilities.
-            LawLens deterministically verifies every finding against our 28-section statutory corpus before it is ever shown to a lawyer.
+            Nothi AI deterministically verifies every finding against our 28-section statutory corpus before it is ever shown to a lawyer.
           </p>
         </div>
 

@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono, Noto_Serif_Bengali, Lora } from "next/font/google";
 import { LangProvider } from "@/lib/lang";
+import { ChatProvider } from "@/context/ChatContext";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { ChatDrawer } from "@/components/chat/ChatDrawer";
+import { ChatFloatingLauncher } from "@/components/chat/ChatFloatingLauncher";
 import "./globals.css";
 
 const inter = Inter({
@@ -41,7 +44,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "LawLens — Legal Document Vetting",
+  title: "Nothi AI (নথি এআই) — Legal Document Vetting",
   description:
     "Deterministic auditing of Bangladeshi property transfer documents: Saf Kabala deeds, RS/BS Khatians, and National IDs. By Team Boron at Pointfex.",
 };
@@ -54,9 +57,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className={`${inter.className} flex min-h-full flex-col bg-background text-foreground antialiased selection:bg-green-deep selection:text-paper`}>
         <LangProvider>
-          <Header />
-          <main id="main-content" className="flex-1 w-full">{children}</main>
-          <Footer />
+          <ChatProvider>
+            <Header />
+            <main id="main-content" className="flex-1 w-full">{children}</main>
+            <Footer />
+            <ChatDrawer />
+            <ChatFloatingLauncher />
+          </ChatProvider>
         </LangProvider>
       </body>
     </html>

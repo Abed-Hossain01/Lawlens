@@ -457,7 +457,7 @@ export function createStampMarkTexture(packet: 'A' | 'B' = 'B'): THREE.CanvasTex
   ctx.font = 'bold 20px monospace';
   ctx.fillText(isB ? 'STATUTORY DEFECTS FOUND' : 'PARITY FULLY CONFIRMED', center, 410);
   ctx.font = '16px monospace';
-  ctx.fillText('LAWLENS VETTING MEMO • 2024', center, 440);
+  ctx.fillText('NOTHI AI VETTING MEMO • 2024', center, 440);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.anisotropy = 8;

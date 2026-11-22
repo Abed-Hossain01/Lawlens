@@ -111,8 +111,8 @@ export function CitationDrawer({ citation, onClose, supportingRule }: CitationDr
             </p>
             <p className="leading-normal">
               {lang === 'bn'
-                ? 'আইন-লেন্স কৃত্রিমভাবে কোনো আইনি ধারা রচনা করে না। প্রতিটি ধারা স্থানীয় laws_corpus.json থেকে অপরিবর্তিতভাবে উদ্ধৃত।'
-                : 'LawLens enforces NFR-1 citation integrity. Unverified or fabricated statutory sections are strictly blocked by deterministic filters.'}
+                ? 'নথি এআই কৃত্রিমভাবে কোনো আইনি ধারা রচনা করে না। প্রতিটি ধারা স্থানীয় laws_corpus.json থেকে অপরিবর্তিতভাবে উদ্ধৃত।'
+                : 'Nothi AI enforces NFR-1 citation integrity. Unverified or fabricated statutory sections are strictly blocked by deterministic filters.'}
             </p>
           </div>
         </div>

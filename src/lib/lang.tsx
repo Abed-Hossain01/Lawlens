@@ -13,7 +13,7 @@ const translations: Translations = {
   'nav.language':      { en: 'বাংলা',               bn: 'English' },
 
   // Landing page
-  'hero.title':        { en: 'LawLens',            bn: 'ল-লেন্স' },
+  'hero.title':        { en: 'Nothi AI',           bn: 'নথি এআই' },
   'hero.subtitle':     { en: 'Legal Document Vetting for Bangladeshi Property Transfers', bn: 'বাংলাদেশের সম্পত্তি হস্তান্তরের জন্য আইনি দলিল যাচাই' },
   'hero.cta':          { en: 'Open the audit workspace', bn: 'নিরীক্ষা কার্যক্ষেত্র খুলুন' },
 
@@ -60,7 +60,7 @@ const translations: Translations = {
   'flag.green':        { en: 'GREEN',  bn: 'সবুজ' },
 
   // Footer
-  'footer.credit':     { en: 'LawLens v1.0, Team Boron, Pointfex', bn: 'ল-লেন্স v১.০, টিম বোরন, পয়েন্টফেক্স' },
+  'footer.credit':     { en: 'Nothi AI v1.0, Team Boron, Pointfex', bn: 'নথি এআই v১.০, টিম বোরন, পয়েন্টফেক্স' },
 };
 
 interface LangContextType {

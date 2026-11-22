@@ -24,7 +24,7 @@ export function Header() {
   // Scroll states
   const [isScrolled, setIsScrolled] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const [activeSection, setActiveSection] = useState<'home' | 'how-it-works' | 'phase-1-scope' | 'citations'>('home');
+  const [activeSection, setActiveSection] = useState<'home' | 'ask-ai' | 'how-it-works' | 'who-its-for' | 'citations' | 'pricing'>('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const reducedMotion = useSyncExternalStore(
     subscribeReducedMotion,
@@ -63,10 +63,12 @@ export function Header() {
 
       // 3. Scroll-spy for landing page
       if (isHome) {
-        const sections: Array<'citations' | 'phase-1-scope' | 'how-it-works'> = [
+        const sections: Array<'pricing' | 'citations' | 'who-its-for' | 'how-it-works' | 'ask-ai'> = [
+          'pricing',
           'citations',
-          'phase-1-scope',
+          'who-its-for',
           'how-it-works',
+          'ask-ai',
         ];
         let found = false;
         for (const id of sections) {
@@ -130,11 +132,13 @@ export function Header() {
     }
   }, [mobileMenuOpen]);
 
-  // Nav link definitions (Minimal & Clean)
+  // Nav link definitions (Modern Business Product)
   const navLinks = [
+    { id: 'ask-ai', labelEn: 'Ask AI', labelBn: 'এআই প্রশ্ন', href: isHome ? '#ask-ai' : '/#ask-ai' },
     { id: 'how-it-works', labelEn: 'How it works', labelBn: 'কার্যপ্রণালী', href: isHome ? '#how-it-works' : '/#how-it-works' },
-    { id: 'phase-1-scope', labelEn: 'Scope', labelBn: 'পরিধি', href: isHome ? '#phase-1-scope' : '/#phase-1-scope' },
+    { id: 'who-its-for', labelEn: 'Who it’s for', labelBn: 'কার জন্য', href: isHome ? '#who-its-for' : '/#who-its-for' },
     { id: 'citations', labelEn: 'Citations', labelBn: 'আইনি ধারা', href: isHome ? '#citations' : '/#citations' },
+    { id: 'pricing', labelEn: 'Pricing', labelBn: 'মূল্যতালিকা', href: isHome ? '#pricing' : '/pricing' },
   ];
 
   return (
@@ -167,7 +171,7 @@ export function Header() {
           <Link
             href="/"
             className="group flex items-center no-underline focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden rounded-xs"
-            aria-label="LawLens Home"
+            aria-label="Nothi AI Home"
           >
             <Logo />
           </Link>
