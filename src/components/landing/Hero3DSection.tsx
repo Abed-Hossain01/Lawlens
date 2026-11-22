@@ -48,8 +48,8 @@ export function Hero3DSection() {
     getMobileServerSnapshot
   );
 
-  // Interactive 3D States
-  const [packet, setPacket] = useState<'A' | 'B'>('B'); // Default B (Planted defects benchmark)
+  // Interactive 3D States (Benchmark B: Planted defects examination)
+  const [packet] = useState<'A' | 'B'>('B');
   const [activeDoc, setActiveDoc] = useState<'deed' | 'khatian' | 'nid' | null>(null);
   const [hoveredDoc, setHoveredDoc] = useState<'deed' | 'khatian' | 'nid' | null>(null);
   const [hoveredHotspot, setHoveredHotspot] = useState<string | null>(null);
@@ -263,37 +263,8 @@ export function Hero3DSection() {
                 </p>
               </div>
 
-              {/* Interactive Controls Bar: Packet A/B Switch & Workspace Link */}
+              {/* Interactive Controls Bar */}
               <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                {/* Packet A / B Compliance Benchmark Toggle */}
-                <div className="inline-flex p-0.5 rounded-xs bg-desk-mid/90 backdrop-blur-md border border-brass/40 shadow-md">
-                  <button
-                    type="button"
-                    onClick={() => setPacket('A')}
-                    className={`px-2.5 py-1 rounded-xs text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${packet === 'A'
-                      ? 'bg-flag-green text-paper shadow-sm'
-                      : 'text-paper-dark hover:text-paper'
-                      }`}
-                    title="Load Compliant Packet A (Zero defects, all green)"
-                  >
-                    <span>Packet A</span>
-                    <span className="text-[9px] opacity-80">(Clean)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPacket('B')}
-                    className={`px-2.5 py-1 rounded-xs text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${packet === 'B'
-                      ? 'bg-vermillion text-paper shadow-sm'
-                      : 'text-paper-dark hover:text-paper'
-                      }`}
-                    title="Load Benchmark Packet B (3 planted defects: Dag, 135d lag, 9-digit NID)"
-                  >
-                    <span>Packet B</span>
-                    <span className="text-[9px] opacity-80">(Defects)</span>
-                  </button>
-                </div>
-
                 {/* Sound FX Toggle */}
                 <button
                   type="button"

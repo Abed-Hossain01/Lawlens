@@ -134,9 +134,9 @@ export function Header() {
     }
   }, [mobileMenuOpen]);
 
-  // Nav link definitions (Explore goes to plans, removed AI Assistant)
+  // Nav link definitions (Explore Plans goes to plans, removed AI Assistant)
   const navLinks = [
-    { id: 'pricing', labelEn: 'Explore', labelBn: 'অনুসন্ধান', href: isHome ? '#pricing' : '/pricing' },
+    { id: 'pricing', labelEn: 'Explore Plans', labelBn: 'প্ল্যান অনুসন্ধান', href: isHome ? '#pricing' : '/pricing' },
     { id: 'who-its-for', labelEn: 'Who it’s for', labelBn: 'কার জন্য', href: isHome ? '#who-its-for' : '/#who-its-for' },
     { id: 'citations', labelEn: 'Citations', labelBn: 'আইনি ধারা', href: isHome ? '#citations' : '/#citations' },
   ];
@@ -343,7 +343,7 @@ export function Header() {
                     }}
                     className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-full border border-vermillion/40 text-vermillion font-sans text-xs font-semibold hover:bg-vermillion/10 transition-colors cursor-pointer"
                   >
-                    <span>{lang === 'bn' ? 'লগআউট' : 'Sign Out / Logout'}</span>
+                    <span>{lang === 'bn' ? 'সাইন আউট' : 'Sign Out'}</span>
                   </button>
                 </div>
               ) : (
@@ -359,7 +359,7 @@ export function Header() {
                     <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
-                  <span>{lang === 'bn' ? 'লগইন করুন (Sign in)' : 'Sign In / Login'}</span>
+                  <span>{lang === 'bn' ? 'নিবন্ধন ও সাইন ইন' : 'Register & Sign In'}</span>
                 </button>
               )}
 

@@ -50,11 +50,12 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brass/15 border border-brass/30 text-xs font-mono font-bold text-ink">
-            <span>Transparent Chamber Tiers</span>
+            <span className="w-2 h-2 rounded-full bg-green-deep animate-pulse" />
+            <span>Explore Plans & Capabilities</span>
           </div>
 
           <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-bold text-green-deep tracking-tight">
-            Plans for chambers, banks and developers
+            Explore Plans for chambers, banks and developers
           </h2>
 
           <p className="text-sm sm:text-base text-ink-muted font-sans max-w-xl mx-auto leading-relaxed">

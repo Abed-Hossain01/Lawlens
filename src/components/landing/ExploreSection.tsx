@@ -243,7 +243,7 @@ export function ExploreSection() {
                   href="#pricing"
                   className="w-full py-3.5 px-5 rounded-full bg-green-deep hover:bg-green-mid text-paper font-sans text-xs font-semibold uppercase tracking-wider text-center block transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2 group"
                 >
-                  <span>{lang === 'bn' ? 'সকল পরিকল্পনা ও প্যাকেজ দেখুন' : 'Explore Chamber Plans & Tiers'}</span>
+                  <span>{lang === 'bn' ? 'সকল পরিকল্পনা ও প্যাকেজ দেখুন' : 'Explore Plans'}</span>
                   <span className="group-hover:translate-x-1 transition-transform">→</span>
                 </Link>
 
