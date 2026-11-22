@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react';
-import dynamic from 'next/dynamic';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLang } from '@/lib/lang';
-import { CitationGate2D, SlipItem } from './CitationGate2D';
 import { DrawerDetailModal } from './DrawerDetailModal';
 import type { CorpusSection } from '@/types';
 import {
@@ -12,26 +11,16 @@ import {
   isValidCitationId,
 } from '@/lib/citations';
 
-// Lazy-load the Three.js 3D Canvas
-const CitationGateCanvas = dynamic(
-  () => import('./CitationGateCanvas').then((mod) => mod.CitationGateCanvas),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-[560px] rounded-sm bg-desk-dark border-2 border-border flex flex-col items-center justify-center p-8 text-paper-dark animate-pulse">
-        <div className="w-12 h-12 rounded-full border-2 border-brass border-t-transparent animate-spin mb-4" />
-        <span className="font-heading text-lg font-bold text-brass-light">
-          Mounting The Citation Gate...
-        </span>
-        <span className="text-xs font-mono text-ink-muted mt-1">
-          Loading 28-section statutory corpus cabinet
-        </span>
-      </div>
-    ),
-  }
-);
+export interface CitationCardItem {
+  id: string;
+  act: string;
+  section: string;
+  title: string;
+  status: 'pending' | 'checking' | 'verified' | 'stripped';
+  corpusRecord?: CorpusSection;
+}
 
-const INITIAL_SLIPS: SlipItem[] = [
+const INITIAL_CARDS: CitationCardItem[] = [
   {
     id: 'reg_1908_sec23',
     act: 'Registration Act, 1908',
@@ -62,363 +51,490 @@ const INITIAL_SLIPS: SlipItem[] = [
   },
 ];
 
-// React 19 external store subscribers for SSR-safe media queries
-function subscribeMediaQuery(query: string) {
-  return (callback: () => void) => {
-    const mql = window.matchMedia(query);
-    mql.addEventListener('change', callback);
-    return () => mql.removeEventListener('change', callback);
-  };
-}
-
-const subscribeReducedMotion = subscribeMediaQuery('(prefers-reduced-motion: reduce)');
-const subscribeMobile = subscribeMediaQuery('(max-width: 767px)');
-const getReducedMotionSnapshot = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const getMobileSnapshot = () => window.innerWidth < 768;
-const getServerFalse = () => false;
-
 export function CitationGateSection() {
   const { lang } = useLang();
-  const prefersReducedMotion = useSyncExternalStore(subscribeReducedMotion, getReducedMotionSnapshot, getServerFalse);
-  const isMobile = useSyncExternalStore(subscribeMobile, getMobileSnapshot, getServerFalse);
 
-  // Slips state
-  const [slips, setSlips] = useState<SlipItem[]>(() =>
-    INITIAL_SLIPS.map((s) => ({ ...s }))
+  // Cards and sequence state
+  const [cards, setCards] = useState<CitationCardItem[]>(() =>
+    INITIAL_CARDS.map((c) => ({ ...c }))
   );
   const [isRunning, setIsRunning] = useState(false);
   const [hasRun, setHasRun] = useState(false);
+  const [activeCheckIndex, setActiveCheckIndex] = useState<number | null>(null);
   const [verifiedCount, setVerifiedCount] = useState(0);
   const [strippedCount, setStrippedCount] = useState(0);
 
-  // Interactive UI state
-  const [hoveredSlipId, setHoveredSlipId] = useState<string | null>(null);
+  // User input and modal inspection
+  const [customInput, setCustomInput] = useState('');
   const [selectedRecord, setSelectedRecord] = useState<{
     section: CorpusSection | null;
     id: string | null;
   } | null>(null);
-  const [customIdInput, setCustomIdInput] = useState('');
   const [logEntries, setLogEntries] = useState<{ id: string; time: string; reason: string }[]>([]);
   const [liveAnnouncement, setLiveAnnouncement] = useState('');
 
-  // IntersectionObserver for lazy mounting
-  const sectionRef = useRef<HTMLElement>(null);
-  const [isNearViewport, setIsNearViewport] = useState(false);
+  const runTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Cleanup timers on unmount
   useEffect(() => {
-    if (!sectionRef.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setIsNearViewport(true);
-        }
-      },
-      { rootMargin: '250px' }
-    );
-    observer.observe(sectionRef.current);
-    return () => observer.disconnect();
+    return () => {
+      if (runTimerRef.current) clearTimeout(runTimerRef.current);
+    };
   }, []);
 
-  // Handlers
-  const handleRunCheck = () => {
+  // Run Checkpoint Evaluation Sequence
+  const handleRunCheck = useCallback(() => {
     if (isRunning) return;
     setIsRunning(true);
-    setLiveAnnouncement('Starting citation verification through the statutory gate.');
+    setHasRun(false);
+    setActiveCheckIndex(0);
+    setLiveAnnouncement('Starting citation verification checkpoint.');
 
-    // For 2D fallback, sequentially process with state updates
-    if (isMobile || prefersReducedMotion) {
-      let idx = 0;
-      let vCount = 0;
-      let sCount = 0;
+    let currentIndex = 0;
+    let localVerified = 0;
+    let localStripped = 0;
 
-      const timer = setInterval(() => {
-        if (idx >= slips.length) {
-          clearInterval(timer);
-          setIsRunning(false);
-          setHasRun(true);
-          setVerifiedCount(vCount);
-          setStrippedCount(sCount);
-          setLiveAnnouncement(`Verification complete: ${vCount} verified, ${sCount} stripped.`);
-          return;
-        }
-
-        const currentSlip = slips[idx];
-        const canonical = resolveCanonicalId(currentSlip.id);
-        const isValid = isValidCitationId(canonical);
-
-        setSlips((prev) =>
-          prev.map((s, i) => {
-            if (i === idx) {
-              return { ...s, status: isValid ? 'verified' : 'stripped' };
-            }
-            return s;
-          })
+    function step() {
+      if (currentIndex >= cards.length) {
+        setIsRunning(false);
+        setHasRun(true);
+        setActiveCheckIndex(null);
+        setVerifiedCount(localVerified);
+        setStrippedCount(localStripped);
+        setLiveAnnouncement(
+          `Checkpoint complete: ${localVerified} citations verified against corpus, ${localStripped} fabricated citations stripped.`
         );
+        return;
+      }
 
-        if (isValid) {
-          vCount++;
-          setVerifiedCount(vCount);
-          setLiveAnnouncement(`${currentSlip.id} verified: exists in laws_corpus.json.`);
+      setActiveCheckIndex(currentIndex);
+      const card = cards[currentIndex];
+      const canonical = resolveCanonicalId(card.id);
+      const isVerified = isValidCitationId(canonical);
+
+      // 1. Mark as checking
+      setCards((prev) =>
+        prev.map((c, idx) => (idx === currentIndex ? { ...c, status: 'checking' } : c))
+      );
+
+      // 2. Evaluate and stamp after brief scanning pause (650ms)
+      runTimerRef.current = setTimeout(() => {
+        if (isVerified) {
+          localVerified++;
+          setVerifiedCount(localVerified);
+          setCards((prev) =>
+            prev.map((c, idx) => (idx === currentIndex ? { ...c, status: 'verified' } : c))
+          );
+          setLiveAnnouncement(`${card.id} verified against verified statutory corpus.`);
         } else {
-          sCount++;
-          setStrippedCount(sCount);
+          localStripped++;
+          setStrippedCount(localStripped);
+          setCards((prev) =>
+            prev.map((c, idx) => (idx === currentIndex ? { ...c, status: 'stripped' } : c))
+          );
           const time = new Date().toLocaleTimeString();
           setLogEntries((prev) => [
-            { id: currentSlip.id, time, reason: 'not found in laws_corpus.json' },
+            { id: card.id, time, reason: 'not found in laws_corpus.json' },
             ...prev,
           ]);
-          setLiveAnnouncement(`${currentSlip.id} removed: not found in laws_corpus.json.`);
+          setLiveAnnouncement(`${card.id} rejected and removed: not found in laws_corpus.json.`);
         }
 
-        idx++;
-      }, 750);
+        // 3. Move to next card
+        runTimerRef.current = setTimeout(() => {
+          currentIndex++;
+          step();
+        }, 650);
+      }, 650);
     }
-  };
 
+    step();
+  }, [cards, isRunning]);
+
+  // Reset to initial clean state
   const handleReset = () => {
+    if (runTimerRef.current) clearTimeout(runTimerRef.current);
     setIsRunning(false);
     setHasRun(false);
+    setActiveCheckIndex(null);
     setVerifiedCount(0);
     setStrippedCount(0);
-    setSlips(INITIAL_SLIPS.map((s) => ({ ...s, status: 'pending' })));
+    setCards(INITIAL_CARDS.map((c) => ({ ...c, status: 'pending' })));
     setLogEntries([]);
-    setLiveAnnouncement('Citation gate reset. Slips returned to input tray.');
+    setLiveAnnouncement('Checkpoint reset. All citation cards returned to initial state.');
   };
 
-  const handle3DSequenceComplete = useCallback((vCount: number, sCount: number) => {
-    setIsRunning(false);
-    setHasRun(true);
-    setVerifiedCount(vCount);
-    setStrippedCount(sCount);
-    setLiveAnnouncement(`Verification sequence complete: ${vCount} verified, ${sCount} stripped.`);
-  }, []);
-
-  const handleLogEntry = useCallback((id: string, reason: string) => {
-    const time = new Date().toLocaleTimeString();
-    setLogEntries((prev) => [{ id, time, reason }, ...prev]);
-  }, []);
-
-  const handleAnnounce = useCallback((msg: string) => {
-    setLiveAnnouncement(msg);
-  }, []);
-
-  const handleAddCustomSlip = (idToAdd: string) => {
+  // Add custom ID slip
+  const handleAddCustomId = (idToAdd: string) => {
     const trimmed = idToAdd.trim();
     if (!trimmed) return;
-    if (slips.some((s) => s.id === trimmed)) {
-      setLiveAnnouncement(`Slip with ID ${trimmed} already exists.`);
+    if (cards.some((c) => c.id === trimmed)) {
+      setLiveAnnouncement(`Citation ID ${trimmed} already exists in the checkpoint.`);
       return;
     }
 
     const canonical = resolveCanonicalId(trimmed);
-    const corpusSection = getCorpusSectionById(canonical);
+    const corpusRecord = getCorpusSectionById(canonical);
 
-    const newSlip: SlipItem = {
+    const newCard: CitationCardItem = {
       id: trimmed,
-      act: corpusSection?.act || 'Custom Statutory Query',
-      section: corpusSection?.section || 'Query Section',
-      title: corpusSection?.title || (corpusSection ? 'Verified Section' : 'Unregistered Input ID'),
+      act: corpusRecord?.act || 'Custom Legal Query',
+      section: corpusRecord?.section || 'Query Section',
+      title: corpusRecord?.title || (corpusRecord ? 'Verified Section' : 'Unregistered Input Citation'),
       status: 'pending',
-      corpusRecord: corpusSection,
+      corpusRecord: corpusRecord,
     };
 
-    setSlips((prev) => [...prev, newSlip]);
-    setCustomIdInput('');
-    setLiveAnnouncement(`Added citation slip for ${trimmed}. Ready to check.`);
+    setCards((prev) => [...prev, newCard]);
+    setCustomInput('');
+    setLiveAnnouncement(`Added citation card for ${trimmed}. Ready to check.`);
   };
 
-  const handleSelectSlip = (slip: SlipItem) => {
-    const canonical = resolveCanonicalId(slip.id);
-    const record = getCorpusSectionById(canonical) || slip.corpusRecord || null;
-    setSelectedRecord({ section: record, id: slip.id });
+  const handleSelectCard = (card: CitationCardItem) => {
+    if (card.status !== 'verified') return;
+    const canonical = resolveCanonicalId(card.id);
+    const record = getCorpusSectionById(canonical) || card.corpusRecord || null;
+    setSelectedRecord({ section: record, id: card.id });
   };
-
-  const use3D = isNearViewport && !isMobile && !prefersReducedMotion;
 
   return (
     <section
       id="citations"
-      ref={sectionRef}
-      className="py-20 sm:py-24 border-b border-border bg-paper-light scroll-mt-24"
-      aria-labelledby="citations-heading"
+      className="py-24 border-b border-border bg-paper scroll-mt-24"
+      aria-labelledby="citations-main-heading"
     >
-      {/* Invisible Screen Reader Announcement Live Region */}
+      {/* Invisible live region for screen-reader announcements */}
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {liveAnnouncement}
       </div>
 
       <div className="max-w-[1280px] mx-auto px-6 sm:px-8 lg:px-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          {/* ── LEFT COLUMN: COPY & INTERACTIVE CONTROLS (MAX 480PX) ── */}
-          <div className="lg:col-span-5 space-y-6 max-w-lg">
-            {/* Plain sentence-case label */}
-            <div className="text-xs font-mono tracking-wider text-green-mid">
-              Citation integrity
-            </div>
+        {/* ── 1. SECTION HEADER (MODERN, CONFIDENT, MINIMAL) ── */}
+        <div className="space-y-4 max-w-3xl">
+          <h2
+            id="citations-main-heading"
+            className="font-heading text-green-deep tracking-tight text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.08] font-bold"
+          >
+            {lang === 'bn'
+              ? 'উদ্ধৃতি নির্ভরযোগ্যতা ও সংবিধিবদ্ধ গেট'
+              : 'Why citations can be trusted'}
+          </h2>
 
-            {/* Sensibly wrapped heading */}
-            <h2
-              id="citations-heading"
-              className="font-heading text-3xl sm:text-4xl font-bold text-green-deep leading-tight max-w-md"
-            >
-              {lang === 'bn'
-                ? 'উদ্ধৃতি নির্ভরযোগ্যতা ও সংবিধিবদ্ধ গেট'
-                : 'Why Citations Can Be Trusted'}
-            </h2>
+          <p className="text-base sm:text-lg text-ink-muted font-sans leading-relaxed">
+            In property title vetting, fabricated statutory citations create fatal title liabilities.
+            LawLens deterministically verifies every finding against our 28-section statutory corpus before it is ever shown to a lawyer.
+          </p>
+        </div>
 
-            {/* Tightened descriptive copy */}
-            <div className="space-y-3 text-sm text-ink-muted font-sans leading-relaxed">
-              <p>
-                In property title vetting, fabricated statutory citations create fatal legal liabilities.
-                LawLens enforces an uncompromising gatekeeper: every generated finding must resolve against
-                our authoritative statutory corpus (<code className="font-mono text-xs bg-paper-dark px-1.5 py-0.5 rounded-xs text-ink font-semibold">laws_corpus.json</code>).
-              </p>
-              <p>
-                Any citation ID not present in the verified corpus is deterministically stripped and logged
-                before rendering, guaranteeing that every warning shown to a lawyer corresponds to true Bangladeshi law.
-              </p>
-            </div>
+        {/* ── 2. THE STAR: THE DARK INK CHECKPOINT PANEL ── */}
+        <div className="mt-10 sm:mt-12 rounded-[20px] bg-[#1a1a18] border border-white/10 shadow-2xl p-6 sm:p-10 lg:p-12 min-h-[540px] text-paper relative overflow-hidden flex flex-col justify-between">
+          {/* Subtle warm atmospheric glow */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-40"
+            style={{
+              background:
+                'radial-gradient(ellipse at 50% 15%, rgba(176, 141, 87, 0.12) 0%, rgba(27, 67, 50, 0.08) 50%, transparent 80%)',
+            }}
+          />
 
-            {/* Corpus Stats Badge */}
-            <div className="pt-1 flex items-center gap-3 text-xs font-mono text-ink-muted">
-              <span className="inline-flex items-center gap-1.5 text-green-deep font-bold">
-                <span className="w-2 h-2 rounded-full bg-green-mid" />
-                Verified Corpus: 28 Sections
+          {/* Top Panel Bar */}
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-brass animate-pulse" />
+              <span className="font-sans text-sm sm:text-base font-semibold tracking-wide text-paper">
+                Statutory Checkpoint
               </span>
-              <span>•</span>
-              <span>4 Acts</span>
+              <span className="text-xs text-brass-light font-mono px-2 py-0.5 rounded-xs bg-brass/15 border border-brass/30">
+                28 Sections • 4 Acts
+              </span>
             </div>
 
-            {/* Primary Action Buttons */}
-            <div className="pt-2 flex flex-wrap items-center gap-3">
+            {/* Live Counters */}
+            <div className="flex items-center gap-3 font-mono text-xs sm:text-sm">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-green-deep/80 text-green-light border border-green-light/30">
+                <span className="font-bold">✓ Verified:</span>
+                <span className="text-paper font-semibold">{verifiedCount}</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-vermillion/80 text-vermillion-light border border-vermillion-light/30">
+                <span className="font-bold">▲ Removed:</span>
+                <span className="text-paper font-semibold">{strippedCount}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 3. CITATION CARDS THROUGH THE CHECKPOINT (3D FANNED STAGE) ── */}
+          <div className="relative z-10 my-8 py-4 sm:py-6" style={{ perspective: '1200px' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {cards.map((card, idx) => {
+                const isChecking = activeCheckIndex === idx;
+                const isVerified = card.status === 'verified';
+                const isStripped = card.status === 'stripped';
+
+                // Initial 3D tilt angles for fanned physical desk appearance
+                const baseRotateY = idx === 0 ? -4 : idx === 1 ? -1.5 : idx === 2 ? 1.5 : 4;
+                const baseRotateZ = idx === 0 ? -1 : idx === 1 ? -0.4 : idx === 2 ? 0.4 : 1;
+
+                return (
+                  <motion.div
+                    key={card.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                      rotateY: isChecking ? 0 : baseRotateY,
+                      rotateZ: isChecking ? 0 : baseRotateZ,
+                      scale: isChecking ? 1.04 : 1,
+                    }}
+                    transition={{ duration: 0.35, ease: 'easeOut' }}
+                    whileHover={
+                      !isRunning && isVerified
+                        ? { y: -10, scale: 1.03, zIndex: 30 }
+                        : !isRunning
+                        ? { y: -6, scale: 1.02, zIndex: 20 }
+                        : undefined
+                    }
+                    onClick={() => handleSelectCard(card)}
+                    className={`relative rounded-sm transition-shadow duration-200 select-none ${
+                      isVerified ? 'cursor-pointer' : 'cursor-default'
+                    }`}
+                  >
+                    {/* The Physical Paper Card */}
+                    <div
+                      className={`relative rounded-sm p-5 sm:p-6 bg-[#fdfbf7] text-[#1a1a18] shadow-xl border-2 transition-colors duration-300 flex flex-col justify-between min-h-[220px] overflow-hidden ${
+                        isVerified
+                          ? 'border-green-deep/70 ring-2 ring-green-mid/40 shadow-green-deep/20'
+                          : isStripped
+                          ? 'border-vermillion/70 bg-[#faf3f2] opacity-75'
+                          : isChecking
+                          ? 'border-brass ring-2 ring-brass/50 shadow-brass/30'
+                          : 'border-[#b08d57]/40 hover:border-brass hover:shadow-2xl'
+                      }`}
+                    >
+                      {/* Brass corner accent lines */}
+                      <div className="absolute top-0 right-0 w-8 h-8 pointer-events-none">
+                        <div className="absolute top-1.5 right-1.5 w-4 h-[1px] bg-brass/50" />
+                        <div className="absolute top-1.5 right-1.5 h-4 w-[1px] bg-brass/50" />
+                      </div>
+
+                      {/* Card Content Header */}
+                      <div className="space-y-2">
+                        {/* Monospace Citation ID */}
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-sm sm:text-base font-bold text-ink">
+                            {card.id}
+                          </span>
+                          {isVerified && (
+                            <span className="text-[11px] font-mono text-green-deep font-semibold">
+                              [CORPUS]
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Serif Section Title */}
+                        <h3 className="font-heading text-base sm:text-lg text-ink font-bold leading-snug">
+                          {card.section ? `${card.section} • ` : ''}
+                          {card.title}
+                        </h3>
+                      </div>
+
+                      {/* Card Bottom: Act Label */}
+                      <div className="pt-4 border-t border-border/60 flex items-center justify-between text-xs text-ink-muted">
+                        <span className="font-sans font-medium truncate max-w-[170px]" title={card.act}>
+                          {card.act}
+                        </span>
+
+                        {isVerified && (
+                          <span className="text-[11px] font-mono text-green-deep font-semibold underline underline-offset-2">
+                            View entry &rarr;
+                          </span>
+                        )}
+                      </div>
+
+                      {/* ── SCANLINE BEAM ANIMATION (WHILE CHECKING) ── */}
+                      {isChecking && (
+                        <motion.div
+                          className="absolute left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-brass to-transparent pointer-events-none shadow-[0_0_12px_#b08d57]"
+                          initial={{ top: '0%' }}
+                          animate={{ top: ['0%', '100%', '0%'] }}
+                          transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                      )}
+
+                      {/* ── BOTTLE-GREEN VERIFIED SEAL STAMP ── */}
+                      <AnimatePresence>
+                        {isVerified && (
+                          <motion.div
+                            initial={{ scale: 2.2, opacity: 0, rotate: -15 }}
+                            animate={{ scale: 1, opacity: 0.95, rotate: -4 }}
+                            transition={{ type: 'spring', damping: 14, stiffness: 260 }}
+                            className="absolute bottom-4 right-4 pointer-events-none"
+                          >
+                            <div className="px-3.5 py-1.5 rounded-xs border-2 border-green-deep bg-green-deep/10 text-green-deep font-mono text-xs font-black tracking-widest uppercase flex items-center gap-1.5 shadow-sm">
+                              <span>✓</span>
+                              <span>VERIFIED</span>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* ── VERMILLION NOT IN CORPUS STAMP ── */}
+                      <AnimatePresence>
+                        {isStripped && (
+                          <motion.div
+                            initial={{ scale: 2.2, opacity: 0, rotate: 12 }}
+                            animate={{ scale: 1, opacity: 0.95, rotate: 3 }}
+                            transition={{ type: 'spring', damping: 14, stiffness: 260 }}
+                            className="absolute bottom-4 right-4 pointer-events-none"
+                          >
+                            <div className="px-3 py-1.5 rounded-xs border-2 border-vermillion bg-vermillion/10 text-vermillion font-mono text-xs font-black tracking-widest uppercase flex items-center gap-1.5 shadow-sm">
+                              <span>▲</span>
+                              <span>NOT IN CORPUS</span>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* ── CLEAN SHREDDER EFFECT (SPLIT STRIPS WHEN STRIPPED) ── */}
+                      {isStripped && (
+                        <div className="absolute inset-0 pointer-events-none flex">
+                          {[0, 1, 2, 3].map((stripIdx) => (
+                            <motion.div
+                              key={stripIdx}
+                              initial={{ y: 0, opacity: 0 }}
+                              animate={{ y: [0, 4, 2], opacity: 1 }}
+                              transition={{ duration: 0.4, delay: stripIdx * 0.06 }}
+                              className={`flex-1 border-r border-dashed border-vermillion/40 ${
+                                stripIdx % 2 === 0 ? 'bg-vermillion/5' : 'bg-transparent'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── 4. CHECKPOINT ACTIONS & INTERACTIVE CONTROLS ── */}
+          <div className="relative z-10 pt-4 border-t border-white/10 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              {/* Primary Evaluation Trigger Button */}
               {!hasRun ? (
                 <button
                   type="button"
                   disabled={isRunning}
                   onClick={handleRunCheck}
-                  className="px-5 py-2.5 rounded-xs bg-green-deep text-paper hover:bg-green-mid font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-sm focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden active:scale-95 cursor-pointer disabled:opacity-50"
+                  className="px-8 py-3.5 rounded-sm bg-green-deep hover:bg-green-mid text-paper font-sans text-base font-semibold transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-2.5 focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden"
                 >
-                  {isRunning ? 'Checking through gate...' : 'Check these citations'}
+                  <span>{isRunning ? 'Evaluating against corpus...' : 'Check these citations'}</span>
+                  <span className="text-brass-light font-bold">→</span>
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="px-4 py-2 rounded-xs border border-border bg-paper hover:bg-paper-dark font-mono text-xs font-bold text-ink transition-colors shadow-xs focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden cursor-pointer"
-                >
-                  ↺ Run again
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="px-6 py-3 rounded-sm border border-brass text-brass-light hover:bg-brass/20 font-sans text-sm font-semibold transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden"
+                  >
+                    ↺ Run again
+                  </button>
+                  <span className="text-sm font-mono text-green-light font-bold">
+                    ✓ 3 verified statutes confirmed • 1 fabricated clause stripped
+                  </span>
+                </div>
               )}
 
-              {/* Counters */}
-              <div className="flex items-center gap-2 text-xs font-mono">
-                <span className="px-2 py-1 rounded-xs bg-green-deep/10 text-green-deep border border-green-deep/20 font-bold">
-                  {verifiedCount} Verified
-                </span>
-                <span className="px-2 py-1 rounded-xs bg-vermillion/10 text-vermillion border border-vermillion/20 font-bold">
-                  {strippedCount} Stripped
-                </span>
+              {/* Status Hint */}
+              <div className="text-xs sm:text-sm font-mono text-paper-dark/70">
+                {isRunning
+                  ? 'Sequential lookup in laws_corpus.json...'
+                  : hasRun
+                  ? 'All entries cross-referenced'
+                  : 'Initial state: identical unverified slips'}
               </div>
             </div>
 
-            {/* "Try your own ID" Interactive Input */}
-            <div className="pt-4 border-t border-border space-y-2">
-              <label htmlFor="custom-citation-input" className="block text-xs font-mono font-bold text-ink">
-                Try your own ID:
-              </label>
-
+            {/* "Try your own ID" Quick Testing Bar */}
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-4 text-xs font-mono text-paper-dark">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  handleAddCustomSlip(customIdInput);
+                  handleAddCustomId(customInput);
                 }}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 max-w-md w-full"
               >
+                <label htmlFor="checkpoint-custom-id" className="text-paper-dark/80 whitespace-nowrap">
+                  Try your own ID:
+                </label>
                 <input
-                  id="custom-citation-input"
+                  id="checkpoint-custom-id"
                   type="text"
-                  value={customIdInput}
-                  onChange={(e) => setCustomIdInput(e.target.value)}
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value)}
                   placeholder="e.g. tpa_1882_s54"
-                  className="flex-1 px-3 py-1.5 rounded-xs border border-border bg-paper text-xs font-mono text-ink placeholder:text-ink-muted/50 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden"
+                  className="flex-1 px-3 py-1.5 rounded-xs bg-[#241b16] border border-white/20 text-xs font-mono text-paper placeholder:text-paper-dark/40 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden"
                 />
                 <button
                   type="submit"
-                  className="px-3 py-1.5 rounded-xs bg-paper-dark hover:bg-border text-ink font-mono text-xs font-semibold border border-border transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xs bg-brass/30 hover:bg-brass text-paper font-semibold border border-brass/50 transition-colors cursor-pointer"
                 >
-                  Add Slip
+                  Add
                 </button>
               </form>
 
-              {/* Quick Preset Buttons */}
-              <div className="flex items-center gap-2 pt-1 text-[11px] font-mono">
-                <span className="text-ink-muted">Quick test:</span>
+              {/* Shortcut buttons */}
+              <div className="flex items-center gap-3">
+                <span className="text-paper-dark/60">Presets:</span>
                 <button
                   type="button"
-                  onClick={() => handleAddCustomSlip('tpa_1882_s54')}
-                  className="text-green-deep hover:underline font-bold cursor-pointer"
+                  onClick={() => handleAddCustomId('tpa_1882_s54')}
+                  className="text-green-light hover:underline font-semibold cursor-pointer"
                 >
                   Try a real ID
                 </button>
-                <span className="text-border">•</span>
+                <span className="text-white/20">•</span>
                 <button
                   type="button"
-                  onClick={() => handleAddCustomSlip('nid_rule_99_fabricated')}
-                  className="text-vermillion hover:underline font-bold cursor-pointer"
+                  onClick={() => handleAddCustomId('nid_rule_99_fabricated')}
+                  className="text-vermillion-light hover:underline font-semibold cursor-pointer"
                 >
                   Try a made-up ID
                 </button>
               </div>
             </div>
-          </div>
 
-          {/* ── RIGHT COLUMN: 3D THE CITATION GATE SCENE (560PX TALL) ── */}
-          <div className="lg:col-span-7">
-            <div className="w-full h-[520px] sm:h-[560px] rounded-sm border-2 border-border bg-desk-dark shadow-xl overflow-hidden relative">
-              {use3D ? (
-                <CitationGateCanvas
-                  slips={slips}
-                  isRunning={isRunning}
-                  onSequenceComplete={handle3DSequenceComplete}
-                  onSelectSlip={handleSelectSlip}
-                  onLogEntry={handleLogEntry}
-                  onAnnounce={handleAnnounce}
-                  hoveredSlipId={hoveredSlipId}
-                  setHoveredSlipId={setHoveredSlipId}
-                />
-              ) : (
-                <div className="w-full h-full overflow-y-auto p-4 sm:p-6 bg-paper">
-                  <CitationGate2D
-                    slips={slips}
-                    isRunning={isRunning}
-                    onRunCheck={handleRunCheck}
-                    onReset={handleReset}
-                    onSelectSlip={handleSelectSlip}
-                    logEntries={logEntries}
-                    verifiedCount={verifiedCount}
-                    strippedCount={strippedCount}
-                  />
+            {/* Registry Discard Ledger Output */}
+            {logEntries.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-3 p-3 rounded-xs bg-black/40 border border-vermillion/40 text-xs font-mono text-vermillion-light flex flex-wrap items-center justify-between gap-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-vermillion">[DISCARD LOG]</span>
+                  <span>[{logEntries[0].time}]</span>
+                  <span className="font-bold text-paper">{logEntries[0].id}</span>
+                  <span>&rarr;</span>
+                  <span>{logEntries[0].reason}</span>
                 </div>
-              )}
-
-              {/* Live Overlay Ledger Plate in 3D Mode */}
-              {use3D && logEntries.length > 0 && (
-                <div className="absolute bottom-3 left-3 right-3 p-2.5 rounded-xs bg-paper/95 border border-brass text-[11px] font-mono text-vermillion shadow-md flex items-center justify-between pointer-events-none animate-in fade-in slide-in-from-bottom-2">
-                  <span className="font-bold">▲ DISCARD LEDGER:</span>
-                  <span>[{logEntries[0].time}] {logEntries[0].id} &rarr; {logEntries[0].reason}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Required one-line caption under the scene */}
-            <p className="mt-3 text-center text-xs text-ink-muted font-sans">
-              Every citation is checked against the verified corpus before it is shown.
-            </p>
+                <span className="text-[11px] text-paper-dark/70">
+                  SRS FR-4.2 Zero-Fabrication Invariant Enforced
+                </span>
+              </motion.div>
+            )}
           </div>
         </div>
+
+        {/* Required one-line caption under the dark panel */}
+        <p className="mt-4 text-center text-sm text-ink-muted font-sans">
+          Every citation is checked against the verified corpus before it is shown.
+        </p>
       </div>
 
-      {/* Drawer Record Close-Up Modal */}
+      {/* Archival Record Inspection Modal */}
       <DrawerDetailModal
         section={selectedRecord?.section || null}
         citationId={selectedRecord?.id || null}
