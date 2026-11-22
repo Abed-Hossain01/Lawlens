@@ -1,16 +1,13 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/lang';
 import { Hero3DSection } from '@/components/landing/Hero3DSection';
 import { FiveStagesFlow } from '@/components/landing/FiveStagesFlow';
+import { CitationGateSection } from '@/components/landing/citation-gate/CitationGateSection';
 
 export default function HomePage() {
   const { lang, t } = useLang();
-
-  // Interactive Citation Demo State
-  const [demoState, setDemoState] = useState<'idle' | 'running' | 'filtered'>('idle');
 
   const pipelineStages = [
     {
@@ -65,17 +62,6 @@ export default function HomePage() {
     },
   ];
 
-  const handleRunCitationDemo = () => {
-    setDemoState('running');
-    setTimeout(() => {
-      setDemoState('filtered');
-    }, 600);
-  };
-
-  const handleResetCitationDemo = () => {
-    setDemoState('idle');
-  };
-
   return (
     <div className="flex flex-col bg-paper text-ink">
       {/* ── 1. HERO 3D SCENE: 400VH PINNED REGISTRY DESK ──────────── */}
@@ -86,176 +72,8 @@ export default function HomePage() {
         <FiveStagesFlow stages={pipelineStages} />
       </section>
 
-      {/* ── 3. SECTION 2: ZERO-FABRICATION CITATION VERIFICATION ───── */}
-      <section id="citations" className="py-24 border-b border-border bg-paper-light scroll-mt-24">
-        <div className="max-w-[1280px] mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Column: Zero-Fabrication Rule Explanation */}
-            <div className="lg:col-span-5 space-y-4">
-              <div className="text-xs font-mono uppercase tracking-widest text-green-mid">
-                Determinism & Grounding (FR-4.1)
-              </div>
-              <h2 className="font-heading text-3xl sm:text-4xl font-bold text-green-deep leading-tight">
-                {lang === 'bn'
-                  ? 'উদ্ধৃতি নির্ভরযোগ্যতা ও শূন্য-বিভ্রম নিয়ম'
-                  : 'Why Citations Can Be Trusted'}
-              </h2>
-              <p className="text-sm text-ink-muted font-sans leading-relaxed">
-                In legal document vetting, hallucinated statutory sections create fatal title liabilities.
-                LawLens enforces a strict zero-fabrication gatekeeper: every generated finding must resolve
-                against our authoritative statutory corpus (<code className="font-mono text-xs bg-paper-dark px-1.5 py-0.5 rounded-xs">laws_corpus.json</code>).
-              </p>
-              <p className="text-sm text-ink-muted font-sans leading-relaxed">
-                Any citation ID not present in the verified corpus is deterministically stripped and logged
-                before rendering, guaranteeing that every warning shown to a lawyer corresponds to true Bangladeshi law.
-              </p>
-
-              <div className="pt-2 flex items-center gap-3 text-xs font-mono text-ink-muted">
-                <span className="inline-flex items-center gap-1 text-green-deep font-bold">
-                  ✓ Verified Corpus: 28 Sections
-                </span>
-                <span>•</span>
-                <span>4 Acts</span>
-              </div>
-            </div>
-
-            {/* Right Column: Interactive Citation Striker Demo */}
-            <div className="lg:col-span-7">
-              <div className="border-2 border-border rounded-xs bg-paper shadow-lg overflow-hidden">
-                {/* Terminal Header */}
-                <div className="p-3.5 bg-paper-dark border-b border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-vermillion" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-flag-green" />
-                    <span className="ml-2 font-mono text-xs font-bold text-ink">
-                      citation_filter.ts — Live Integrity Filter Test
-                    </span>
-                  </div>
-
-                  <span className="text-[11px] font-mono text-ink-muted">
-                    Input: 4 Citations (1 Fabricated)
-                  </span>
-                </div>
-
-                {/* Interactive Demo Body */}
-                <div className="p-6 space-y-4">
-                  <p className="text-xs text-ink-muted font-sans">
-                    Test the deterministic gatekeeper below. Click the button to send a batch containing an unverified citation ID:
-                  </p>
-
-                  <div className="space-y-2.5">
-                    {/* Item 1: Verified Registration Act */}
-                    <div className="p-3 rounded-xs border border-border bg-paper-light flex items-center justify-between">
-                      <div>
-                        <div className="font-mono text-xs font-bold text-green-deep">
-                          reg_1908_sec23
-                        </div>
-                        <div className="text-xs text-ink font-sans">
-                          Section 23, Registration Act 1908 (4-month registration time window)
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-xs bg-green-deep/10 text-green-deep font-mono text-[10px] font-bold">
-                        VERIFIED
-                      </span>
-                    </div>
-
-                    {/* Item 2: Verified Transfer of Property Act */}
-                    <div className="p-3 rounded-xs border border-border bg-paper-light flex items-center justify-between">
-                      <div>
-                        <div className="font-mono text-xs font-bold text-green-deep">
-                          tp_1882_sec52
-                        </div>
-                        <div className="text-xs text-ink font-sans">
-                          Section 52, Transfer of Property Act 1882 (Transfer pending suit / Lis Pendens)
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-xs bg-green-deep/10 text-green-deep font-mono text-[10px] font-bold">
-                        VERIFIED
-                      </span>
-                    </div>
-
-                    {/* Item 3: THE FABRICATED CITATION */}
-                    <div
-                      className={`p-3 rounded-xs border transition-all duration-300 flex items-center justify-between ${
-                        demoState === 'filtered'
-                          ? 'border-vermillion/40 bg-vermillion/5 opacity-50 line-through'
-                          : demoState === 'running'
-                          ? 'border-vermillion bg-vermillion/10 animate-pulse'
-                          : 'border-border bg-paper-light'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-mono text-xs font-bold text-vermillion">
-                          reg_1908_sec999_fake_clause
-                        </div>
-                        <div className="text-xs text-ink font-sans">
-                          Section 999 Fabricated Hallucination (Does not exist in 1908 statute)
-                        </div>
-                      </div>
-
-                      {demoState === 'filtered' ? (
-                        <span className="px-2 py-0.5 rounded-xs bg-vermillion text-paper font-mono text-[10px] font-bold no-underline">
-                          STRIPPED BY FILTER
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-xs bg-amber/20 text-amber font-mono text-[10px] font-bold">
-                          UNVERIFIED ID
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Item 4: Verified Land Crime Act */}
-                    <div className="p-3 rounded-xs border border-border bg-paper-light flex items-center justify-between">
-                      <div>
-                        <div className="font-mono text-xs font-bold text-green-deep">
-                          land_crime_2023_sec4
-                        </div>
-                        <div className="text-xs text-ink font-sans">
-                          Section 4, Land Crime Prevention & Remedy Act 2023 (Penalties for forged deeds)
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-xs bg-green-deep/10 text-green-deep font-mono text-[10px] font-bold">
-                        VERIFIED
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Actions & Status */}
-                  <div className="pt-2 flex items-center justify-between">
-                    {demoState === 'idle' ? (
-                      <button
-                        type="button"
-                        onClick={handleRunCitationDemo}
-                        className="px-4 py-2 rounded-xs bg-green-deep text-paper hover:bg-green-mid font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer"
-                      >
-                        ▶ Run with a fake citation
-                      </button>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={handleResetCitationDemo}
-                          className="px-3.5 py-1.5 rounded-xs border border-border bg-paper-light hover:bg-paper-dark font-mono text-xs transition-colors cursor-pointer"
-                        >
-                          Reset Demo
-                        </button>
-                        <span className="text-xs font-mono text-green-deep font-bold">
-                          ✓ Result: 1 fabricated ID removed, 3 verified statutes preserved.
-                        </span>
-                      </div>
-                    )}
-
-                    <span className="text-[11px] font-mono text-ink-muted">
-                      Status: {demoState === 'filtered' ? 'PASS (0 Hallucinations)' : 'Ready'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ── 3. SECTION 2: 3D INTERACTIVE CITATION GATE CHECKPOINT ──── */}
+      <CitationGateSection />
 
       {/* ── 4. SECTION 3: PHASE 1 REGISTRY INDEX WITH DOTTED LEADERS ─ */}
       <section id="phase-1-scope" className="py-24 border-b border-border bg-paper scroll-mt-24">

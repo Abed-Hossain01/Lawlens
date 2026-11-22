@@ -96,4 +96,50 @@ describe('Citation Filter', () => {
     const section = getCorpusSectionById('does_not_exist');
     expect(section).toBeUndefined();
   });
+
+  it('runs the 4 sample demonstration citations through the filter expecting 3 verified and 1 stripped', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const sampleCitations: Citation[] = [
+      {
+        id: 'reg_1908_sec23',
+        act: 'Registration Act, 1908',
+        section: 'Section 23',
+        title: 'Time for presenting documents',
+      },
+      {
+        id: 'tp_1882_sec52',
+        act: 'Transfer of Property Act, 1882',
+        section: 'Section 52',
+        title: 'Transfer of property pending suit',
+      },
+      {
+        id: 'land_crime_2023_sec4',
+        act: 'Land Crime Prevention & Remedy Act, 2023',
+        section: 'Section 4',
+        title: 'Penalties for forged deeds',
+      },
+      {
+        id: 'reg_1908_sec999_fake_clause',
+        act: 'Registration Act, 1908',
+        section: 'Section 999',
+        title: 'Fabricated Hallucination',
+      },
+    ];
+
+    const result = filterValidCitations(sampleCitations);
+    expect(result).toHaveLength(3);
+    expect(result.map((c) => c.id)).toEqual([
+      'reg_1908_sec23',
+      'tp_1882_sec52',
+      'land_crime_2023_sec4',
+    ]);
+
+    // Expect the fake citation to have been logged and stripped
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('reg_1908_sec999_fake_clause')
+    );
+
+    warnSpy.mockRestore();
+  });
 });
