@@ -2,6 +2,7 @@
 
 interface LogoProps {
   className?: string;
+  isTransparent?: boolean;
 }
 
 export function Logo({ className = '' }: LogoProps) {

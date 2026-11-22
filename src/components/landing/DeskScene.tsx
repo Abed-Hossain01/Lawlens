@@ -27,7 +27,6 @@ export function DeskScene({
   setActiveDoc,
   hoveredDoc,
   setHoveredDoc,
-  hoveredHotspot: _hoveredHotspot,
   setHoveredHotspot,
   soundEnabled,
   isMobile = false,
@@ -273,7 +272,7 @@ export function DeskScene({
 
         // Camera micro-shake on impact
         if (shake !== 0) {
-          camera.position.y += shake;
+          state.camera.position.y += shake;
         }
       } else {
         stampGroup.current.visible = false;
@@ -316,8 +315,8 @@ export function DeskScene({
       targetLookAt = new THREE.Vector3(isMobile ? 0.3 : 1.55, 0.3, 0.0);
     }
 
-    camera.position.lerp(targetCamPos, delta * 4);
-    camera.lookAt(targetLookAt);
+    state.camera.position.lerp(targetCamPos, delta * 4);
+    state.camera.lookAt(targetLookAt);
   });
 
   return (

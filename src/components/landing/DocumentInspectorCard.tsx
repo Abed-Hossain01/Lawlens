@@ -146,19 +146,17 @@ export function DocumentInspectorCard({
                 {f.labelEn}
               </div>
               <div
-                className={`text-sm sm:text-base font-semibold text-ink ${
-                  f.mono ? 'font-mono' : 'font-sans'
-                }`}
+                className={`text-sm sm:text-base font-semibold text-ink ${f.mono ? 'font-mono' : 'font-sans'
+                  }`}
               >
                 {f.value}
               </div>
               {f.flag && (
                 <div
-                  className={`mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-xs text-[10px] font-mono font-bold tracking-wide ${
-                    f.isDefect
+                  className={`mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-xs text-[10px] font-mono font-bold tracking-wide ${f.isDefect
                       ? 'bg-vermillion/10 text-vermillion border border-vermillion/30'
                       : 'bg-green-deep/10 text-green-deep border border-green-deep/30'
-                  }`}
+                    }`}
                 >
                   <span>{f.isDefect ? '▲' : '✓'}</span>
                   <span>{f.flag}</span>

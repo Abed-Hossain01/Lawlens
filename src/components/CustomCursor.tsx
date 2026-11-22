@@ -6,11 +6,19 @@ const subscribeMounted = () => () => {};
 const getMountedSnapshot = () => true;
 const getMountedServerSnapshot = () => false;
 
+interface ClickRipple {
+  id: number;
+  x: number;
+  y: number;
+  type: string | null;
+}
+
 export function CustomCursor() {
   const mounted = useSyncExternalStore(subscribeMounted, getMountedSnapshot, getMountedServerSnapshot);
   const [visible, setVisible] = useState(false);
   const [hoveredType, setHoveredType] = useState<string | null>(null);
   const [isClicking, setIsClicking] = useState(false);
+  const [ripples, setRipples] = useState<ClickRipple[]>([]);
 
   // Positions
   const mousePos = useRef({ x: -100, y: -100 });
@@ -39,15 +47,31 @@ export function CustomCursor() {
           setHoveredType('button');
         } else if (target.closest('input') || target.closest('select') || target.closest('textarea')) {
           setHoveredType('input');
-        } else if (target.closest('[data-flag-defect="true"]') || target.closest('.bg-vermillion\\/10')) {
+        } else if (
+          target.closest('[data-flag-defect="true"]') ||
+          target.closest('.bg-vermillion\\/10') ||
+          target.closest('.text-vermillion')
+        ) {
           setHoveredType('defect');
+        } else if (target.closest('canvas') || target.closest('[data-inspect="true"]')) {
+          setHoveredType('inspect');
         } else {
           setHoveredType(null);
         }
       }
     };
 
-    const onMouseDown = () => setIsClicking(true);
+    const onMouseDown = (e: MouseEvent) => {
+      setIsClicking(true);
+      const newRipple: ClickRipple = {
+        id: Date.now(),
+        x: e.clientX,
+        y: e.clientY,
+        type: hoveredType,
+      };
+      setRipples((prev) => [...prev.slice(-3), newRipple]);
+    };
+
     const onMouseUp = () => setIsClicking(false);
 
     const onMouseLeave = () => setVisible(false);
@@ -59,10 +83,10 @@ export function CustomCursor() {
     document.addEventListener('mouseleave', onMouseLeave);
     document.addEventListener('mouseenter', onMouseEnter);
 
-    // Smooth trailing physics loop
+    // Smooth trailing physics loop with sub-pixel interpolation
     const render = () => {
-      // Lerp trailing ring
-      const ease = 0.16;
+      // Lerp trailing ring (buttery smooth damping)
+      const ease = 0.18;
       trailPos.current.x += (mousePos.current.x - trailPos.current.x) * ease;
       trailPos.current.y += (mousePos.current.y - trailPos.current.y) * ease;
 
@@ -87,12 +111,23 @@ export function CustomCursor() {
       document.removeEventListener('mouseenter', onMouseEnter);
       if (rafId.current) cancelAnimationFrame(rafId.current);
     };
-  }, [visible]);
+  }, [visible, hoveredType]);
+
+  // Clean up ripples after animation duration
+  useEffect(() => {
+    if (ripples.length === 0) return;
+    const timer = setTimeout(() => {
+      setRipples((prev) => prev.filter((r) => Date.now() - r.id < 600));
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [ripples]);
 
   if (!mounted) return null;
 
   const isButton = hoveredType === 'button';
   const isDefect = hoveredType === 'defect';
+  const isInspect = hoveredType === 'inspect';
+  const isInput = hoveredType === 'input';
 
   return (
     <div
@@ -101,48 +136,135 @@ export function CustomCursor() {
       }`}
       aria-hidden="true"
     >
-      {/* 1. Precision Center Dot (Follows cursor instantly) */}
+      {/* ── 1. CLICK STAMP RIPPLES (PHYSICAL NOTARY SEAL EFFECT) ── */}
+      {ripples.map((ripple) => (
+        <div
+          key={ripple.id}
+          className="fixed top-0 left-0 pointer-events-none -ml-6 -mt-6 w-12 h-12 rounded-full border-2 border-brass animate-stamp-expand flex items-center justify-center"
+          style={{
+            transform: `translate3d(${ripple.x}px, ${ripple.y}px, 0)`,
+            borderColor: ripple.type === 'defect' ? '#c0392b' : '#b08d57',
+            boxShadow: ripple.type === 'defect' ? '0 0 12px rgba(192,57,43,0.4)' : '0 0 12px rgba(176,141,87,0.3)',
+          }}
+        >
+          <div className="w-6 h-6 rounded-full border border-dashed border-current opacity-60" />
+        </div>
+      ))}
+
+      {/* ── 2. PRECISION CENTER TARGET (INSTANT ZERO-LAG RETICLE) ── */}
       <div
         ref={dotRef}
-        className="fixed top-0 left-0 w-2 h-2 -ml-1 -mt-1 rounded-full bg-green-deep pointer-events-none shadow-xs transition-transform duration-0"
-        style={{
-          boxShadow: isDefect
-            ? '0 0 8px #c0392b'
-            : isButton
-            ? '0 0 6px #2d6a4f'
-            : '0 0 4px rgba(27,67,50,0.6)',
-        }}
-      />
+        className="fixed top-0 left-0 pointer-events-none -ml-2 -mt-2 w-4 h-4 flex items-center justify-center transition-transform duration-0"
+      >
+        {/* Center Pip */}
+        <div
+          className={`w-1.5 h-1.5 rounded-full transition-all duration-150 ${
+            isDefect
+              ? 'bg-vermillion scale-125 shadow-[0_0_8px_#c0392b]'
+              : isButton
+              ? 'bg-green-mid scale-125 shadow-[0_0_6px_#2d6a4f]'
+              : isInspect
+              ? 'bg-brass scale-110 shadow-[0_0_6px_#b08d57]'
+              : 'bg-green-deep shadow-[0_0_3px_rgba(27,67,50,0.8)]'
+          }`}
+        />
 
-      {/* 2. Responsive Trailing Lens / Reticle (Smooth damped trailing) */}
+        {/* Micro-crosshairs around central point */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-40">
+          <div className="absolute w-3 h-[1px] bg-current" />
+          <div className="absolute h-3 w-[1px] bg-current" />
+        </div>
+      </div>
+
+      {/* ── 3. BESPOKE ANIMATED INSPECTION LOUPE / ROTATING BRASS BEZEL ── */}
       <div
         ref={ringRef}
-        className={`fixed top-0 left-0 -ml-5 -mt-5 rounded-full pointer-events-none transition-[width,height,border-color,background-color] duration-150 ease-out flex items-center justify-center ${
-          isClicking
-            ? 'w-6 h-6 -ml-3 -mt-3 scale-90 border-2 bg-brass/30 border-brass'
-            : isDefect
-            ? 'w-14 h-14 -ml-7 -mt-7 border-2 border-vermillion bg-vermillion/15 animate-pulse'
-            : isButton
-            ? 'w-12 h-12 -ml-6 -mt-6 border-2 border-green-mid bg-green-deep/10 scale-110 shadow-sm'
-            : 'w-10 h-10 -ml-5 -mt-5 border border-brass/60 bg-brass/5'
-        }`}
+        className="fixed top-0 left-0 pointer-events-none -ml-7 -mt-7 w-14 h-14 flex items-center justify-center transition-[transform] duration-75 ease-out"
       >
-        {/* Reticle Fine Crosshairs when idle */}
-        {!isButton && !isClicking && (
-          <div className="relative w-full h-full flex items-center justify-center opacity-40">
-            <div className="absolute w-2 h-[1px] bg-brass left-1" />
-            <div className="absolute w-2 h-[1px] bg-brass right-1" />
-            <div className="absolute h-2 w-[1px] bg-brass top-1" />
-            <div className="absolute h-2 w-[1px] bg-brass bottom-1" />
-          </div>
-        )}
+        <div
+          className={`relative rounded-full transition-all duration-200 ease-out flex items-center justify-center ${
+            isClicking
+              ? 'w-8 h-8 scale-90 bg-brass/25 border-2 border-brass shadow-inner'
+              : isDefect
+              ? 'w-16 h-16 border-2 border-vermillion bg-vermillion/10 animate-pulse shadow-[0_0_16px_rgba(192,57,43,0.3)]'
+              : isButton
+              ? 'w-14 h-14 border-2 border-green-mid bg-green-deep/12 shadow-[0_0_12px_rgba(45,106,79,0.25)]'
+              : isInspect
+              ? 'w-15 h-15 border-2 border-brass bg-brass/10 shadow-[0_0_14px_rgba(176,141,87,0.25)]'
+              : isInput
+              ? 'w-10 h-10 border border-green-mid/70 bg-green-deep/5'
+              : 'w-11 h-11 border border-brass/70 bg-brass/5 shadow-xs'
+          }`}
+        >
+          {/* A. Rotating Cardinal Bezel (Slow Animated Clockwise Ring) */}
+          {!isClicking && (
+            <svg
+              className="absolute inset-0 w-full h-full animate-spin-slow pointer-events-none opacity-60"
+              viewBox="0 0 44 44"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* Outer delicate dashed gauge */}
+              <circle
+                cx="22"
+                cy="22"
+                r="20"
+                stroke={isDefect ? '#c0392b' : isButton ? '#2d6a4f' : '#b08d57'}
+                strokeWidth="0.8"
+                strokeDasharray="2 3"
+              />
+              {/* 4 Cardinal Marks (North, East, South, West) */}
+              <line x1="22" y1="1" x2="22" y2="4" stroke={isDefect ? '#c0392b' : isButton ? '#2d6a4f' : '#b08d57'} strokeWidth="1.4" strokeLinecap="round" />
+              <line x1="22" y1="40" x2="22" y2="43" stroke={isDefect ? '#c0392b' : isButton ? '#2d6a4f' : '#b08d57'} strokeWidth="1.4" strokeLinecap="round" />
+              <line x1="1" y1="22" x2="4" y2="22" stroke={isDefect ? '#c0392b' : isButton ? '#2d6a4f' : '#b08d57'} strokeWidth="1.4" strokeLinecap="round" />
+              <line x1="40" y1="22" x2="43" y2="22" stroke={isDefect ? '#c0392b' : isButton ? '#2d6a4f' : '#b08d57'} strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+          )}
 
-        {/* Hover Inspect badge */}
-        {isButton && (
-          <span className="text-[8px] font-mono font-bold tracking-widest uppercase text-green-deep opacity-80">
-            VIEW
-          </span>
-        )}
+          {/* B. Optical Glass Sheen Reflection (Simulating convex glass lens) */}
+          <div
+            className="absolute inset-1 rounded-full pointer-events-none opacity-30"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 50%, rgba(176,141,87,0.15) 100%)',
+            }}
+          />
+
+          {/* C. Interactive State Overlays */}
+          {/* Button Mode: Optical Viewfinder Corner Brackets */}
+          {isButton && !isClicking && (
+            <div className="absolute inset-0 pointer-events-none">
+              <span className="absolute top-1 left-1 w-2 h-2 border-t-2 border-l-2 border-green-mid" />
+              <span className="absolute top-1 right-1 w-2 h-2 border-t-2 border-r-2 border-green-mid" />
+              <span className="absolute bottom-1 left-1 w-2 h-2 border-b-2 border-l-2 border-green-mid" />
+              <span className="absolute bottom-1 right-1 w-2 h-2 border-b-2 border-r-2 border-green-mid" />
+              <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-xs bg-green-deep text-[8px] font-mono font-bold tracking-widest text-paper shadow-xs whitespace-nowrap">
+                AUDIT
+              </span>
+            </div>
+          )}
+
+          {/* Inspect / 3D Desk Mode: Loupe Handle & Inspect Badge */}
+          {isInspect && !isClicking && (
+            <div className="absolute inset-0 pointer-events-none">
+              {/* Loupe handle sticking out bottom-right */}
+              <div
+                className="absolute -bottom-3 -right-3 w-5 h-1.5 bg-brass rounded-xs origin-top-left rotate-45 shadow-xs border border-brass-light/40"
+              />
+              <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-xs bg-brass text-[8px] font-mono font-bold tracking-widest text-ink shadow-xs whitespace-nowrap">
+                EXAMINE
+              </span>
+            </div>
+          )}
+
+          {/* Defect Mode: Alert Indicator Badge */}
+          {isDefect && !isClicking && (
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+              <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-xs bg-vermillion text-[8px] font-mono font-bold tracking-widest text-paper shadow-xs animate-bounce whitespace-nowrap">
+                ▲ DEFECT
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

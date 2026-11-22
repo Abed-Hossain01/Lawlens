@@ -169,7 +169,7 @@ export function Header() {
             className="group flex items-center no-underline focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden rounded-xs"
             aria-label="LawLens Home"
           >
-            <Logo isTransparent={false} />
+            <Logo />
           </Link>
 
           {/* ── CENTER: DESKTOP NAVIGATION LINKS (SANS 15PX, 24PX GAP, BLACK/GREEN) ── */}
