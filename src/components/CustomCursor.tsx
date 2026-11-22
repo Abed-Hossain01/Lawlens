@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useSyncExternalStore } from 'react';
+
+const subscribeMounted = () => () => {};
+const getMountedSnapshot = () => true;
+const getMountedServerSnapshot = () => false;
 
 export function CustomCursor() {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribeMounted, getMountedSnapshot, getMountedServerSnapshot);
   const [visible, setVisible] = useState(false);
   const [hoveredType, setHoveredType] = useState<string | null>(null);
   const [isClicking, setIsClicking] = useState(false);
@@ -23,8 +27,6 @@ export function CustomCursor() {
     if (!isFinePointer || isReducedMotion) {
       return;
     }
-
-    setMounted(true);
 
     const onMouseMove = (e: MouseEvent) => {
       mousePos.current = { x: e.clientX, y: e.clientY };

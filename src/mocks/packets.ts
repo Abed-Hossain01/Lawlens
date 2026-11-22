@@ -2,8 +2,6 @@ import type {
   AuditResult,
   EntityMap,
   EntityRow,
-  Flag,
-  MemoSection,
 } from '@/types';
 
 // ── Packet A: Compliant ────────────────────────────────

@@ -9,27 +9,44 @@ LawLens is an automated legal vetting system for Bangladeshi property transactio
 ## 1. Quick Start
 
 ### Prerequisites
-- Node.js 18+ (tested on Node.js 20+)
-- npm 9+
+- Node.js >= 22.12.0 (configured in `package.json` engines)
+- npm 10+
 
-### Installation & Run
+### Installation & Verification
 ```bash
 # Install dependencies
 npm install
 
-# Run the development server
-npm run dev
+# Run linter
+npm run lint
 
-# Run unit tests (Citation integrity filter)
-npx vitest run
+# TypeScript verification
+npx tsc --noEmit
 
-# Build for production
+# Run unit tests (Vitest)
+npm test
+
+# Build for production (Next.js Turbopack)
 npm run build
 
 # Start production server
 npm start
 ```
-The application runs at `http://localhost:3000`.
+The application runs locally at `http://localhost:3000`.
+
+---
+
+## 2. Deploying to Vercel
+
+LawLens is a **Next.js 16 (App Router) + React 19** application with strict TypeScript. To deploy to Vercel:
+
+1. **Framework Preset**: Select **Next.js** (auto-detected).
+2. **Node.js Version**: In Vercel Project Settings → General → Node.js Version, select **22.x** (compatible with `"engines": { "node": ">=22.12.0" }`).
+3. **Build Command**: `npm run build` (or `next build`).
+4. **Output Directory**: `.next` (Next.js default, do not override).
+5. **Install Command**: `npm install` (standard strict peer dependency resolution).
+6. **Environment Variables**:
+   - `NEXT_PUBLIC_API_URL` (optional, defaults to mock API client if omitted). Refer to `.env.example`.
 
 ---
 

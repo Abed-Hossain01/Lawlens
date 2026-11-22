@@ -1,11 +1,10 @@
 'use client';
 
 interface LogoProps {
-  isTransparent?: boolean;
   className?: string;
 }
 
-export function Logo({ isTransparent = false, className = '' }: LogoProps) {
+export function Logo({ className = '' }: LogoProps) {
   return (
     <div className={`flex items-center gap-3 select-none ${className}`}>
       {/* ── ORIGINAL INLINE SVG MARK: INSPECTION LENS OVER REGISTRY DEED CORNER ── */}

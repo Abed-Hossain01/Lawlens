@@ -16,12 +16,11 @@ export function DocumentViewer({
   activeDoc,
   onDocChange,
   selectedFlag,
-  hasAudited,
   isDefectPacket,
 }: DocumentViewerProps) {
-  const { lang, t } = useLang();
+  const { lang } = useLang();
   const [zoomLevel, setZoomLevel] = useState(100);
-  const [currentPage, setCurrentPage] = useState(1);
+  const currentPage = 1;
 
   // When a flag with highlight is selected, automatically switch to that document tab
   useEffect(() => {
@@ -50,11 +49,10 @@ export function DocumentViewer({
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => onDocChange(tab.id)}
-                className={`px-3 py-1.5 text-xs rounded-sm font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
-                  isActive
-                    ? 'bg-green-deep text-paper shadow-xs font-semibold'
-                    : 'bg-paper-light text-ink-muted hover:text-ink hover:bg-paper-dark border border-border/60'
-                }`}
+                className={`px-3 py-1.5 text-xs rounded-sm font-medium transition-all cursor-pointer flex items-center gap-1.5 ${isActive
+                  ? 'bg-green-deep text-paper shadow-xs font-semibold'
+                  : 'bg-paper-light text-ink-muted hover:text-ink hover:bg-paper-dark border border-border/60'
+                  }`}
               >
                 <span>{lang === 'bn' ? tab.labelBn : tab.labelEn}</span>
                 <span className="text-[10px] opacity-75 font-mono">
@@ -110,20 +108,18 @@ export function DocumentViewer({
           {/* Active Highlight Bounding Box Overlay */}
           {selectedFlag && selectedFlag.highlight?.docType === activeDoc && (
             <div
-              className={`absolute z-30 pointer-events-none transition-all duration-300 ${
-                activeDoc === 'khatian'
-                  ? 'top-44 left-10 right-10 h-16 border-2 border-vermillion bg-vermillion/10 animate-pulse'
-                  : activeDoc === 'deed'
+              className={`absolute z-30 pointer-events-none transition-all duration-300 ${activeDoc === 'khatian'
+                ? 'top-44 left-10 right-10 h-16 border-2 border-vermillion bg-vermillion/10 animate-pulse'
+                : activeDoc === 'deed'
                   ? 'bottom-20 left-10 right-10 h-16 border-2 border-vermillion bg-vermillion/10 animate-pulse'
                   : 'top-32 left-10 right-10 h-16 border-2 border-amber bg-amber/10 animate-pulse'
-              } rounded-xs`}
+                } rounded-xs`}
             >
               <div
-                className={`absolute -top-5 left-2 px-1.5 py-0.5 rounded-xs text-[10px] font-mono font-bold tracking-wider ${
-                  selectedFlag.severity === 'RED'
-                    ? 'bg-vermillion text-paper'
-                    : 'bg-amber text-paper'
-                }`}
+                className={`absolute -top-5 left-2 px-1.5 py-0.5 rounded-xs text-[10px] font-mono font-bold tracking-wider ${selectedFlag.severity === 'RED'
+                  ? 'bg-vermillion text-paper'
+                  : 'bg-amber text-paper'
+                  }`}
               >
                 FLAGGED REGION: {selectedFlag.id}
               </div>
@@ -178,11 +174,10 @@ export function DocumentViewer({
 
               {/* Execution & Registration Dates */}
               <div
-                className={`border p-3 rounded-xs ${
-                  isDefectPacket
-                    ? 'border-vermillion/40 bg-vermillion/5'
-                    : 'border-border bg-paper-light'
-                }`}
+                className={`border p-3 rounded-xs ${isDefectPacket
+                  ? 'border-vermillion/40 bg-vermillion/5'
+                  : 'border-border bg-paper-light'
+                  }`}
               >
                 <div className="font-sans font-bold text-[11px] text-green-deep uppercase">সম্পাদন ও নিবন্ধন তারিখ</div>
                 <div className="grid grid-cols-2 gap-2 font-mono text-xs mt-1">
@@ -234,9 +229,8 @@ export function DocumentViewer({
                       <td className="p-2 border-r border-border font-serif">
                         আব্দুল করিম (১.০০০ অংশ)
                       </td>
-                      <td className={`p-2 border-r border-border font-bold text-sm ${
-                        isDefectPacket ? 'text-vermillion' : 'text-green-deep'
-                      }`}>
+                      <td className={`p-2 border-r border-border font-bold text-sm ${isDefectPacket ? 'text-vermillion' : 'text-green-deep'
+                        }`}>
                         {isDefectPacket ? '৪২১ (Dag 421)' : '৪১২ (Dag 412)'}
                       </td>
                       <td className="p-2 border-r border-border font-serif">ধানী</td>
@@ -259,7 +253,7 @@ export function DocumentViewer({
             <div className="space-y-4 text-xs font-sans">
               <div className="border-b-2 border-green-deep pb-3 text-center">
                 <div className="text-[10px] font-mono tracking-widest uppercase text-ink-muted">
-                  Government of the People's Republic of Bangladesh
+                  Government of the People&apos;s Republic of Bangladesh
                 </div>
                 <h3 className="text-base font-bold text-green-deep mt-0.5">
                   National ID Card / জাতীয় পরিচয়পত্র
@@ -288,9 +282,8 @@ export function DocumentViewer({
                   <div className="pt-1 border-t border-border/60">
                     <div className="text-[10px] text-ink-muted uppercase">ID NO (জাতীয় পরিচয় নং)</div>
                     <div
-                      className={`font-mono text-base font-extrabold tracking-wider ${
-                        isDefectPacket ? 'text-amber' : 'text-green-deep'
-                      }`}
+                      className={`font-mono text-base font-extrabold tracking-wider ${isDefectPacket ? 'text-amber' : 'text-green-deep'
+                        }`}
                     >
                       {isDefectPacket ? '269478513 (9 Digits - Invalid)' : '2694785130 (10 Digits)'}
                     </div>

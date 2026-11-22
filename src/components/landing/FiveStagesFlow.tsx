@@ -17,14 +17,14 @@ interface FiveStagesFlowProps {
   stages: PipelineStage[];
 }
 
+// Exact mathematical node arc-length ratios along the curve: 0%, 25%, 50%, 75%, 100%
+const NODE_RATIOS = [0.0, 0.25, 0.5, 0.75, 1.0];
+
 export function FiveStagesFlow({ stages }: FiveStagesFlowProps) {
   const { lang } = useLang();
   const containerRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const mobilePathRef = useRef<SVGPathElement>(null);
-
-  // Exact mathematical node arc-length ratios along the curve: 0%, 25%, 50%, 75%, 100%
-  const NODE_RATIOS = [0.0, 0.25, 0.5, 0.75, 1.0];
 
   // Smooth damped progress state (0.0 to 1.0)
   const targetProgress = useRef(0);
@@ -143,7 +143,7 @@ export function FiveStagesFlow({ stages }: FiveStagesFlowProps) {
     const totalScrollable = containerRef.current.offsetHeight - window.innerHeight;
     const targetY = scrollTop + NODE_RATIOS[idx] * totalScrollable;
     window.scrollTo({ top: targetY, behavior: 'smooth' });
-  }, [NODE_RATIOS]);
+  }, []);
 
   // Cinematic Guided Tour: glides between milestones and pauses briefly at each stage
   const toggleGuidedTour = () => {

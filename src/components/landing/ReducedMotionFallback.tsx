@@ -8,7 +8,7 @@ interface FallbackProps {
 }
 
 export function ReducedMotionFallback({ currentStep, packet = 'B' }: FallbackProps) {
-  const { lang, t } = useLang();
+  const { t } = useLang();
 
   return (
     <div className="w-full h-full min-h-[440px] bg-desk-dark p-6 sm:p-8 flex flex-col justify-between text-paper">

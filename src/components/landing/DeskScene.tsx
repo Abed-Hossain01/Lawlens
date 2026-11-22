@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useMemo, useEffect } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { createDocumentTexture, createStampMarkTexture } from './textures';
 import { playStampThud, playScanChime } from '@/lib/audio';
@@ -27,13 +27,12 @@ export function DeskScene({
   setActiveDoc,
   hoveredDoc,
   setHoveredDoc,
-  hoveredHotspot,
+  hoveredHotspot: _hoveredHotspot,
   setHoveredHotspot,
   soundEnabled,
   isMobile = false,
   replayTrigger = 0,
 }: DeskSceneProps) {
-  const { camera } = useThree();
 
   // Damped scroll progress
   const smoothP = useRef(0);

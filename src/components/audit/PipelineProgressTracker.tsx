@@ -10,7 +10,6 @@ interface PipelineProgressTrackerProps {
 
 export function PipelineProgressTracker({ progress }: PipelineProgressTrackerProps) {
   const { lang } = useLang();
-  const currentIndex = PIPELINE_STAGES.indexOf(progress.currentStage);
 
   return (
     <div className="rounded-sm border border-border bg-paper p-5 shadow-xs">

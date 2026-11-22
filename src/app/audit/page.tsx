@@ -9,8 +9,8 @@ import type {
   PipelineProgress,
   UploadedFile,
 } from '@/types';
-import { runAudit, uploadBundle } from '@/lib/api';
-import { packetAResult, packetBResult } from '@/mocks/packets';
+import { runAudit } from '@/lib/api';
+import { packetAResult } from '@/mocks/packets';
 import { useLang } from '@/lib/lang';
 
 import { DocumentViewer } from '@/components/audit/DocumentViewer';

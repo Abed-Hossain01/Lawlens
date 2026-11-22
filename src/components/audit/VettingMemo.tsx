@@ -39,7 +39,7 @@ export function VettingMemo({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-green-deep pb-4 mb-6">
         <div>
           <div className="text-[11px] font-mono uppercase tracking-widest text-ink-muted">
-            Government of the People's Republic of Bangladesh
+            Government of the People&apos;s Republic of Bangladesh
           </div>
           <h2 className="font-heading text-xl font-bold text-green-deep tracking-tight">
             {t('audit.memo')}
@@ -64,11 +64,10 @@ export function VettingMemo({
       {/* Official Verdict Seal / Stamp Badge */}
       <div className="absolute top-6 right-6 pointer-events-none opacity-90 print:block">
         <div
-          className={`border-2 sm:border-3 rounded-xs px-3 py-1.5 transform rotate-[-6deg] font-mono text-center tracking-widest uppercase text-xs sm:text-sm font-extrabold ${
-            isCompliant
-              ? 'border-flag-green text-flag-green bg-flag-green/10'
-              : 'border-vermillion text-vermillion bg-vermillion/10'
-          }`}
+          className={`border-2 sm:border-3 rounded-xs px-3 py-1.5 transform rotate-[-6deg] font-mono text-center tracking-widest uppercase text-xs sm:text-sm font-extrabold ${isCompliant
+            ? 'border-flag-green text-flag-green bg-flag-green/10'
+            : 'border-vermillion text-vermillion bg-vermillion/10'
+            }`}
         >
           <div>{verdict === 'COMPLIANT' ? '● VERIFIED COMPLIANT' : '▲ FLAGGED FOR REVIEW'}</div>
           <div className="text-[9px] font-normal tracking-normal mt-0.5">

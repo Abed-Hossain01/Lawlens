@@ -1,9 +1,6 @@
 'use client';
 
-import { useLang } from '@/lib/lang';
-
 export function Footer() {
-  const { t } = useLang();
 
   return (
     <footer className="border-t border-border bg-paper-dark no-print">

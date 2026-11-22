@@ -1,12 +1,27 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useLang } from '@/lib/lang';
 import { ReducedMotionFallback } from './ReducedMotionFallback';
 import { Reticle3DCursor } from './Reticle3DCursor';
 import { DocumentInspectorCard } from './DocumentInspectorCard';
+
+const subscribeReducedMotion = (callback: () => void) => {
+  const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+  mql.addEventListener('change', callback);
+  return () => mql.removeEventListener('change', callback);
+};
+const getReducedMotionSnapshot = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const getReducedMotionServerSnapshot = () => false;
+
+const subscribeMobile = (callback: () => void) => {
+  window.addEventListener('resize', callback);
+  return () => window.removeEventListener('resize', callback);
+};
+const getMobileSnapshot = () => window.innerWidth < 768;
+const getMobileServerSnapshot = () => false;
 
 // Dynamically import Three.js canvas to avoid SSR hydration mismatch
 const RegistryDeskCanvas = dynamic(
@@ -22,8 +37,16 @@ export function Hero3DSection() {
   // Scroll & Stage State
   const [scrollProgress, setScrollProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const prefersReducedMotion = useSyncExternalStore(
+    subscribeReducedMotion,
+    getReducedMotionSnapshot,
+    getReducedMotionServerSnapshot
+  );
+  const isMobile = useSyncExternalStore(
+    subscribeMobile,
+    getMobileSnapshot,
+    getMobileServerSnapshot
+  );
 
   // Interactive 3D States
   const [packet, setPacket] = useState<'A' | 'B'>('B'); // Default B (Planted defects benchmark)
@@ -32,28 +55,6 @@ export function Hero3DSection() {
   const [hoveredHotspot, setHoveredHotspot] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [replayCounter, setReplayCounter] = useState(0);
-
-  useEffect(() => {
-    // Accessibility check
-    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setPrefersReducedMotion(motionQuery.matches);
-
-    const handleMotionChange = (e: MediaQueryListEvent) => {
-      setPrefersReducedMotion(e.matches);
-    };
-    motionQuery.addEventListener('change', handleMotionChange);
-
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-
-    return () => {
-      motionQuery.removeEventListener('change', handleMotionChange);
-      window.removeEventListener('resize', checkMobile);
-    };
-  }, []);
 
   // 400vh Scroll Pinning with Smooth Progress Interpolation
   useEffect(() => {

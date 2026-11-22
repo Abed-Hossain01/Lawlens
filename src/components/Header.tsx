@@ -1,10 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLang } from '@/lib/lang';
 import { Logo } from './Logo';
+
+const subscribeReducedMotion = (callback: () => void) => {
+  const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+  mql.addEventListener('change', callback);
+  return () => mql.removeEventListener('change', callback);
+};
+const getReducedMotionSnapshot = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const getReducedMotionServerSnapshot = () => false;
 
 export function Header() {
   const { lang, setLang } = useLang();
@@ -18,20 +26,15 @@ export function Header() {
   const [isVisible, setIsVisible] = useState(true);
   const [activeSection, setActiveSection] = useState<'home' | 'how-it-works' | 'phase-1-scope' | 'citations'>('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const reducedMotion = useSyncExternalStore(
+    subscribeReducedMotion,
+    getReducedMotionSnapshot,
+    getReducedMotionServerSnapshot
+  );
 
   const lastScrollY = useRef(0);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-
-  // Check prefers-reduced-motion
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReducedMotion(mediaQuery.matches);
-    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mediaQuery.addEventListener('change', onChange);
-    return () => mediaQuery.removeEventListener('change', onChange);
-  }, []);
 
   // Scroll listener for: 24px solid transition, auto-hide on scroll down, and scroll-spy
   useEffect(() => {
@@ -126,9 +129,6 @@ export function Header() {
       document.body.style.overflow = '';
     }
   }, [mobileMenuOpen]);
-
-  // Determine whether transparent or solid
-  const isTransparent = isHome && !isScrolled && !mobileMenuOpen;
 
   // Nav link definitions (Minimal & Clean)
   const navLinks = [
