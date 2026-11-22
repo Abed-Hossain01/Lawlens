@@ -19,7 +19,6 @@ export function Header() {
   const pathname = usePathname();
 
   const isHome = pathname === '/';
-  const isChat = pathname === '/chat';
 
   // Scroll states
   const [isScrolled, setIsScrolled] = useState(false);
@@ -136,7 +135,7 @@ export function Header() {
     { id: 'explore', labelEn: 'Explore', labelBn: 'অনুসন্ধান', href: isHome ? '#explore' : '/#explore' },
     { id: 'who-its-for', labelEn: 'Who it’s for', labelBn: 'কার জন্য', href: isHome ? '#who-its-for' : '/#who-its-for' },
     { id: 'citations', labelEn: 'Citations', labelBn: 'আইনি ধারা', href: isHome ? '#citations' : '/#citations' },
-    { id: 'pricing', labelEn: 'Pricing', labelBn: 'মূল্যতালিকা', href: isHome ? '#pricing' : '/pricing' },
+    { id: 'pricing', labelEn: 'Plans', labelBn: 'পরিকল্পনা', href: isHome ? '#pricing' : '/pricing' },
     { id: 'chat', labelEn: 'AI Assistant', labelBn: 'এআই সহকারী', href: '/chat' },
   ];
 
@@ -157,33 +156,29 @@ export function Header() {
 
       {/* ── STICKY SITE HEADER (72PX DESKTOP, 60PX MOBILE) ── */}
       <header
-        className={`sticky top-0 z-50 w-full select-none transition-all ${
-          reducedMotion ? 'duration-0' : 'duration-200 ease-out'
-        } ${
+        className={`sticky top-0 z-50 w-full select-none transition-all duration-200 ${
           isVisible ? 'translate-y-0' : '-translate-y-full pointer-events-none'
         } ${
-          isChat
-            ? 'bg-paper border-b border-border-light text-ink shadow-[0_1px_3px_rgba(0,0,0,0.05)]'
-            : isScrolled
-            ? 'bg-paper/95 backdrop-blur-md border-b border-border-light text-ink shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
-            : 'bg-paper/90 backdrop-blur-md border-b border-border-light/80 text-ink shadow-xs'
+          isScrolled
+            ? 'bg-paper/90 backdrop-blur-xl border-b border-border/80 text-ink shadow-[0_4px_20px_-4px_rgba(27,67,50,0.06)]'
+            : 'bg-paper/80 backdrop-blur-md border-b border-border/60 text-ink shadow-2xs'
         }`}
       >
-        <div className="mx-auto flex h-[60px] md:h-[72px] max-w-[1280px] items-center justify-between px-6 sm:px-8 lg:px-12">
+        <div className="mx-auto flex h-[60px] md:h-[70px] max-w-[1280px] items-center justify-between px-6 sm:px-8 lg:px-12">
 
           {/* ── LEFT: ORIGINAL LOGO + WORDMARK ── */}
           <Link
             href="/"
-            className="group flex items-center no-underline focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden rounded-xs"
+            className="group flex items-center no-underline focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden rounded-xs transition-transform hover:scale-[1.01]"
             aria-label="Nothi AI Home"
           >
             <Logo />
           </Link>
 
-          {/* ── CENTER: DESKTOP NAVIGATION LINKS (SANS 15PX, 24PX GAP, BLACK/GREEN) ── */}
+          {/* ── CENTER: DESKTOP NAVIGATION LINKS ── */}
           <nav
             aria-label="Primary"
-            className="hidden md:flex items-center gap-6"
+            className="hidden md:flex items-center gap-1.5 lg:gap-2 px-3 py-1 rounded-full bg-paper-dark/40 border border-border/50"
           >
             {navLinks.map((link) => {
               const isActive = isHome && activeSection === link.id;
@@ -192,14 +187,10 @@ export function Header() {
                   key={link.id}
                   href={link.href}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`relative py-1 text-[15px] font-medium font-sans transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden rounded-xs ${
+                  className={`relative px-3.5 py-1.5 text-xs lg:text-[13px] font-medium font-sans rounded-full transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden ${
                     isActive
-                      ? 'text-green-deep font-bold'
-                      : 'text-ink hover:text-green-deep'
-                  } after:absolute after:bottom-0 after:left-0 after:h-[2px] after:bg-brass transition-all ${
-                    reducedMotion ? '' : 'after:transition-all after:duration-200'
-                  } ${
-                    isActive ? 'after:w-full' : 'after:w-0 hover:after:w-full'
+                      ? 'bg-green-deep text-paper font-semibold shadow-xs'
+                      : 'text-ink-muted hover:text-ink hover:bg-paper-dark/70'
                   }`}
                 >
                   {lang === 'bn' ? link.labelBn : link.labelEn}
@@ -208,24 +199,24 @@ export function Header() {
             })}
           </nav>
 
-          {/* ── RIGHT CONTROLS: MINIMAL LANGUAGE SWITCH & AUDIT CTA ── */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          {/* ── RIGHT CONTROLS: LANGUAGE SWITCH & "EXPLORE NOTHI AI →" ── */}
+          <div className="flex items-center gap-3 sm:gap-3.5">
 
             {/* Compact Two-Segment Language Switch "EN | বাং" */}
             <div
               role="radiogroup"
               aria-label="Select interface language"
-              className="inline-flex p-0.5 rounded-xs border border-border bg-paper-dark/60 transition-colors"
+              className="inline-flex p-0.5 rounded-full border border-border bg-paper-dark/70 transition-colors shadow-2xs"
             >
               <button
                 type="button"
                 role="radio"
                 aria-checked={lang === 'en'}
                 onClick={() => setLang('en')}
-                className={`px-2 py-1 rounded-[2px] text-xs font-sans transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden cursor-pointer ${
+                className={`px-2.5 py-1 rounded-full text-xs font-sans transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden cursor-pointer ${
                   lang === 'en'
                     ? 'bg-green-deep text-paper font-bold shadow-xs'
-                    : 'text-ink hover:text-green-deep'
+                    : 'text-ink-muted hover:text-ink'
                 }`}
                 title="Switch interface to English"
               >
@@ -237,10 +228,10 @@ export function Header() {
                 role="radio"
                 aria-checked={lang === 'bn'}
                 onClick={() => setLang('bn')}
-                className={`px-2 py-1 rounded-[2px] text-xs font-bangla transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden cursor-pointer ${
+                className={`px-2.5 py-1 rounded-full text-xs font-bangla transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden cursor-pointer ${
                   lang === 'bn'
                     ? 'bg-green-deep text-paper font-bold shadow-xs'
-                    : 'text-ink hover:text-green-deep'
+                    : 'text-ink-muted hover:text-ink'
                 }`}
                 title="ইন্টারফেস বাংলায় পরিবর্তন করুন"
               >
@@ -251,9 +242,10 @@ export function Header() {
             {/* Primary Filled Button: "Explore Nothi AI →" */}
             <Link
               href="/chat"
-              className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xs font-sans text-sm font-semibold transition-all duration-150 shadow-sm focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden active:scale-95 cursor-pointer bg-green-deep text-paper hover:bg-green-mid"
+              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-full font-sans text-xs font-semibold transition-all duration-150 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden cursor-pointer bg-green-deep text-paper hover:bg-green-mid group"
             >
-              <span>{lang === 'bn' ? 'অনুসন্ধান করুন →' : 'Explore Assistant →'}</span>
+              <span>{lang === 'bn' ? 'নথি এআই দেখুন' : 'Explore Nothi AI'}</span>
+              <span className="group-hover:translate-x-1 transition-transform">→</span>
             </Link>
 
             {/* Mobile Hamburger Menu Button (<768px) */}
@@ -317,9 +309,9 @@ export function Header() {
               <Link
                 href="/chat"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xs bg-green-deep text-paper font-sans text-sm font-semibold hover:bg-green-mid shadow-md"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-green-deep text-paper font-sans text-sm font-semibold hover:bg-green-mid shadow-md"
               >
-                <span>{lang === 'bn' ? 'অনুসন্ধান করুন →' : 'Explore Assistant →'}</span>
+                <span>{lang === 'bn' ? 'নথি এআই দেখুন →' : 'Explore Nothi AI →'}</span>
               </Link>
 
               <p className="text-center text-xs text-ink-muted font-sans">

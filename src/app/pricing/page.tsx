@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { PricingSection } from '@/components/pricing/PricingSection';
 
 export const metadata: Metadata = {
-  title: 'Pricing & Chamber Plans — Nothi AI (নথি এআই)',
+  title: 'Chamber Plans & Packages — Nothi AI (নথি এআই)',
   description:
     'Transparent subscription plans for legal advocates, property vetting chambers, real estate developers, and commercial loan syndicates.',
 };

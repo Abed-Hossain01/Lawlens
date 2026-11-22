@@ -8,204 +8,257 @@ export function ExploreSection() {
   const { lang } = useLang();
   const [activeTab, setActiveTab] = useState<'deed' | 'khatian' | 'nid'>('deed');
 
-  const TRIAD_ITEMS = {
+  const TRIAD_DOCS = {
     deed: {
-      titleEn: 'Saf Kabala Property Deed (সাফ কবলা)',
-      badge: 'Primary Conveyance',
+      type: 'Saf Kabala Property Deed',
+      typeBn: 'সাফ কবলা দলিল',
+      serial: 'Deed No. 4812/2023 • Sub-Registry Sadar',
       act: 'Registration Act, 1908 (Sec. 17 & 23)',
-      pointsEn: [
-        'Automatic calculation of Section 23 4-month statutory execution-to-presentation window.',
-        'Deterministic plot schedule parsing: Mouza, JL number, and Dag boundary allocations.',
-        'Bilingual name matching between deed vendor, khatian owner, and NID smart card.',
+      badge: 'Primary Conveyance',
+      status: 'VERIFIED COMPLIANT',
+      statusColor: 'green',
+      fields: [
+        { label: 'Vendor / Transferor', val: 'Md. Rafiqul Islam (পিতা: মরহুম আবুল কাশেম)' },
+        { label: 'Purchaser / Transferee', val: 'Begum Sultana (স্বামী: মোশাররফ হোসেন)' },
+        { label: 'Schedule Dag (Plot)', val: 'RS Dag No. 892 • Area: 0.1650 Acre' },
+        { label: 'Execution & Filing', val: 'Exec: 12-Oct-2023 → Pres: 18-Nov-2023 (37 Days)' },
       ],
-      pointsBn: [
-        'ধারা ২৩ অনুযায়ী দলিল সম্পাদন থেকে রেজিস্ট্রেশন উপস্থাপনের ৪ মাসের সংবিধিবদ্ধ সময়সীমা যাচাই।',
-        'তফসিলের মৌজা, জেএল নম্বর এবং দাগের সীমানা সূক্ষ্মভাবে নিরূপণ।',
-        'দলিলের বিক্রেতা, খতিয়ানের মালিক এবং এনআইডি স্মার্ট কার্ডের নামের দ্বৈত-ভাষিক সমন্বয়।',
-      ],
-      previewTextEn: 'Deed No. 4812/2023 • Sub-Registry Office Sadar • Execution: 12-Oct-2023',
+      complianceNote:
+        'Section 23 4-month presentation window strictly satisfied. Compulsory registration requirements under Section 17 verified.',
     },
     khatian: {
-      titleEn: 'Collectorate RS / BS Khatian (খতিয়ান)',
-      badge: 'Record of Rights',
+      type: 'Collectorate RS / BS Khatian',
+      typeBn: 'কালেক্টরেট আরএস / বিএস খতিয়ান',
+      serial: 'Khatian Ledger No. 104 • Mouza Tejgaon (JL 24)',
       act: 'Transfer of Property Act, 1882 (Sec. 54)',
-      pointsEn: [
-        'Cross-checks deed schedule Dag plot numbers against collectorate Record of Rights ledgers.',
-        'Identifies Dag mismatch discrepancies before conveyance registration to prevent title defect.',
-        'Verifies possession history and mutation status under Land Crime Prevention Act Section 4.',
+      badge: 'Record of Rights',
+      status: 'PARITY CONFIRMED',
+      statusColor: 'green',
+      fields: [
+        { label: 'Recorded Owner', val: 'Md. Rafiqul Islam (Share: 16 Anna / Full)' },
+        { label: 'Mouza & JL Number', val: 'Tejgaon, Thana Tejgaon, JL No. 24' },
+        { label: 'Cross-Audit Dag Number', val: 'RS Dag 892 (Exact Deed Schedule Match)' },
+        { label: 'Litigation Check', val: 'No Lis Pendens Suits Pending (TPA Sec. 52 Clean)' },
       ],
-      pointsBn: [
-        'কালেক্টরেট রেকর্ড অব রাইটস খতিয়ানের সাথে দলিলের তফসিলের দাগ নম্বরের মিল নিশ্চিতকরণ।',
-        'স্বত্ব জটিলতা এড়াতে দলিল নিবন্ধনের পূর্বেই দাগের গরমিল তাৎক্ষণিক শনাক্তকরণ।',
-        'ভূমি অপরাধ প্রতিরোধ আইনের ধারা ৪ এর অধীনে দখল ও নামজারির আইনি ধারাবাহিকতা যাচাই।',
-      ],
-      previewTextEn: 'Khatian No. 104 • Mouza: Tejgaon • RS Dag No. 892 • Share: 0.1650 Acre',
+      complianceNote:
+        'Dag 892 title lineage verified. Zero adverse mutation encumbrances detected under Section 4 of LCPRA 2023.',
     },
     nid: {
-      titleEn: 'National Identity Smart Card (জাতীয় পরিচয়পত্র)',
-      badge: 'Identity Parity',
+      type: 'National Identity Smart Card',
+      typeBn: 'জাতীয় পরিচয়পত্র স্মার্ট কার্ড',
+      serial: 'NID: 19882692015000142 • Standard 17-Digit',
       act: 'NIDW Rules, 2010 (Rule 3)',
-      pointsEn: [
-        'Strict structural format validation for 10-digit smart cards, 13-digit, and 17-digit national IDs.',
-        'Identifies truncated or invalid identity numbers (e.g. 9-digit defects) instantly.',
-        'Cross-references party details against deed recitals and khatian holder lines.',
+      badge: 'Identity Parity',
+      status: 'FORMAT CERTIFIED',
+      statusColor: 'green',
+      fields: [
+        { label: 'Citizen Name', val: 'Md. Rafiqul Islam (মোহাম্মদ রফিকুল ইসলাম)' },
+        { label: 'Father Name', val: 'Late Abul Kashem (মৃত আবুল কাশেম)' },
+        { label: 'Structural Format', val: '17-Digit Standard Format (Compliant with Rule 3)' },
+        { label: 'Deed Party Alignment', val: '100% Cross-Field Character Match' },
       ],
-      pointsBn: [
-        '১০-ডিজিটের স্মার্ট কার্ড, ১৩-ডিজিট ও ১৭-ডিজিটের জাতীয় পরিচয়পত্রের কাঠামোগত নির্ভুলতা যাচাই।',
-        'অপূর্ণাঙ্গ বা ত্রুটিপূর্ণ পরিচয় নম্বর (যেমন ৯-ডিজিট ত্রুটি) স্বয়ংক্রিয়ভাবে প্রতিরোধ।',
-        'দলিলের পক্ষগণের তথ্যের সাথে জাতীয় পরিচয়পত্রের তথ্যের সম্পূর্ণ মিল যাচাই।',
-      ],
-      previewTextEn: 'NID: 19882692015000142 • Format: 17-Digit Standard • Status: Verified',
+      complianceNote:
+        'Structural format compliance verified. Biometric Election Commission database parity standards satisfied.',
     },
   };
 
-  const current = TRIAD_ITEMS[activeTab];
+  const current = TRIAD_DOCS[activeTab];
 
   return (
     <section
       id="explore"
-      className="py-24 border-b border-border bg-paper scroll-mt-24"
-      aria-labelledby="explore-heading"
+      className="py-24 sm:py-28 border-b border-border bg-paper scroll-mt-28 relative overflow-hidden"
+      aria-labelledby="explore-main-heading"
     >
-      <div className="max-w-[1280px] mx-auto px-6 sm:px-8 lg:px-12">
-        {/* Section Header */}
+      {/* Subtle Background Glow */}
+      <div
+        className="absolute top-0 right-1/4 w-96 h-96 rounded-full pointer-events-none opacity-40 blur-3xl"
+        style={{
+          background: 'radial-gradient(circle, rgba(176,141,87,0.15) 0%, rgba(27,67,50,0.05) 70%, transparent 100%)',
+        }}
+      />
+
+      <div className="max-w-[1280px] mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
+        {/* ── 1. SECTION HEADER: ENGAGING & CONFIDENT ── */}
         <div className="max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brass/15 border border-brass/30 text-xs font-mono font-bold text-ink">
             <span className="w-2 h-2 rounded-full bg-green-deep animate-pulse" />
-            <span>Autonomous Registry Intelligence</span>
+            <span>Autonomous Chamber Intelligence</span>
           </div>
 
           <h2
-            id="explore-heading"
+            id="explore-main-heading"
             className="font-heading text-3xl sm:text-4xl lg:text-5xl font-bold text-green-deep tracking-tight"
           >
             {lang === 'bn'
-              ? 'বাংলাদেশের সম্পত্তি দলিলের বুদ্ধিমত্তা অন্বেষণ করুন'
-              : 'Explore Bangladesh Property Intelligence'}
+              ? 'দলিল পরীক্ষণ ও স্বত্ব সুরক্ষার আধুনিক মানদণ্ড'
+              : 'The Gold Standard for Property Title Vetting'}
           </h2>
 
           <p className="font-sans text-base sm:text-lg text-ink-muted leading-relaxed">
             {lang === 'bn'
-              ? 'সাফ কবলা দলিল, কালেক্টরেট খতিয়ান ও এনআইডির নির্ণায়ক সমন্বয়। কোনো বিভ্রম নেই—প্রতিটি তথ্য ২৮টি সংবিধিবদ্ধ আইনি ধারার ভিত্তিতে যাচাইকৃত।'
-              : 'Deterministic cross-parity examination for property deeds, collectorate khatians, and identity records. Zero hallucination—every single finding maps strictly to 28 verified statutory sections.'}
+              ? 'সাফ কবলা দলিল সম্পাদন থেকে সাব-রেজিস্ট্রেশন দাখিল: আন্তঃনথি সমতা পরীক্ষা করুন, স্বত্ব জটিলতা প্রতিরোধ করুন এবং কোনো বিভ্রমের ঝুঁকি ছাড়াই ব্যাংকের বন্ধকী জামানত সুরক্ষিত রাখুন।'
+              : 'From Saf Kabala deed execution to Sub-Registry presentation: audit cross-document parity, eliminate boundary defects before closing, and protect institutional mortgages with zero hallucination risk.'}
           </p>
         </div>
 
-        {/* ── 3-CARD EXPLORATION MATRIX ── */}
-        <div className="mt-14 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column: Interactive Triad Explorer (7 Cols) */}
-          <div className="lg:col-span-7 border-2 border-border rounded-xs bg-paper-light p-6 sm:p-8 shadow-sm">
-            <div className="flex items-center justify-between pb-4 border-b border-border flex-wrap gap-3">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-green-deep">
-                Document Triad Inspector
-              </span>
-              <span className="text-xs font-mono text-ink-muted">
-                3 Standard Registry Records
-              </span>
-            </div>
+        {/* ── 2. INTERACTIVE LIVE VETTING SHOWCASE + INSPIRING VALUE TIERS ── */}
+        <div className="mt-14 grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+          {/* Left Column: Interactive Digital Document Dossier (7 Cols) */}
+          <div className="lg:col-span-7 rounded-2xl border-2 border-border bg-paper-light p-6 sm:p-8 shadow-sm flex flex-col justify-between">
+            <div>
+              {/* Header inside Dossier */}
+              <div className="flex items-center justify-between pb-4 border-b border-border flex-wrap gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-green-deep uppercase tracking-wider">
+                    Interactive Vetting Dossier
+                  </span>
+                  <span className="text-xs text-brass font-mono">• Live Simulator</span>
+                </div>
 
-            {/* Triad Tab Buttons */}
-            <div className="mt-6 flex flex-wrap gap-2">
-              {(['deed', 'khatian', 'nid'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-xs font-sans text-xs font-bold transition-all cursor-pointer ${
-                    activeTab === tab
-                      ? 'bg-green-deep text-paper shadow-xs'
-                      : 'bg-paper text-ink border border-border hover:bg-paper-dark'
-                  }`}
-                >
-                  {tab === 'deed' ? 'Saf Kabala Deed' : tab === 'khatian' ? 'RS/BS Khatian' : 'National ID'}
-                </button>
-              ))}
-            </div>
-
-            {/* Active Record Detail */}
-            <div className="mt-6 space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <h3 className="font-heading text-xl font-bold text-green-deep">
-                  {current.titleEn}
-                </h3>
-                <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-brass/20 text-ink font-semibold">
-                  {current.badge}
-                </span>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-deep/10 text-green-deep font-mono text-[11px] font-bold border border-green-deep/20">
+                  <span>✓</span>
+                  <span>{current.status}</span>
+                </div>
               </div>
 
-              <div className="p-3 rounded-xs bg-paper border border-border/80 font-mono text-xs text-ink-muted">
-                Statutory Authority: <span className="text-green-deep font-semibold">{current.act}</span>
-              </div>
-
-              <ul className="space-y-3 font-sans text-sm text-ink pt-2">
-                {(lang === 'bn' ? current.pointsBn : current.pointsEn).map((pt, i) => (
-                  <li key={i} className="flex items-start gap-2.5">
-                    <span className="text-green-deep font-bold mt-0.5">✓</span>
-                    <span>{pt}</span>
-                  </li>
+              {/* Document Switcher Tabs */}
+              <div className="mt-6 flex flex-wrap gap-2">
+                {(['deed', 'khatian', 'nid'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 py-2 rounded-full font-sans text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === tab
+                        ? 'bg-green-deep text-paper shadow-sm scale-[1.02]'
+                        : 'bg-paper text-ink border border-border hover:bg-paper-dark'
+                    }`}
+                  >
+                    {tab === 'deed' ? 'Saf Kabala Deed' : tab === 'khatian' ? 'RS/BS Khatian' : 'National ID'}
+                  </button>
                 ))}
-              </ul>
-
-              <div className="mt-6 pt-4 border-t border-border flex items-center justify-between text-xs font-mono text-ink-muted">
-                <span>Sample Normalized Metadata:</span>
-                <span className="text-ink font-medium">{current.previewTextEn}</span>
               </div>
+
+              {/* Active Document Card Simulation */}
+              <div className="mt-6 p-5 sm:p-6 rounded-xl bg-paper border border-border shadow-xs space-y-5">
+                <div className="flex items-start justify-between flex-wrap gap-2 pb-3 border-b border-border/70">
+                  <div>
+                    <h3 className="font-heading text-lg sm:text-xl font-bold text-green-deep">
+                      {lang === 'bn' ? current.typeBn : current.type}
+                    </h3>
+                    <p className="text-xs font-mono text-ink-muted mt-0.5">{current.serial}</p>
+                  </div>
+                  <span className="text-xs font-mono px-3 py-1 rounded-full bg-brass/20 text-ink font-semibold">
+                    {current.badge}
+                  </span>
+                </div>
+
+                {/* Normalized Extracted Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs font-sans">
+                  {current.fields.map((field, fIdx) => (
+                    <div key={fIdx} className="p-3 rounded-lg bg-paper-light border border-border/60 space-y-1">
+                      <div className="text-[10px] font-mono text-ink-muted uppercase tracking-wider">
+                        {field.label}
+                      </div>
+                      <div className="font-semibold text-ink leading-snug">{field.val}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Statutory Parity Guarantee */}
+                <div className="p-3.5 rounded-lg bg-green-deep/5 border border-green-deep/20 flex items-start gap-2.5 text-xs">
+                  <span className="text-green-deep font-bold mt-0.5">§</span>
+                  <div className="space-y-0.5">
+                    <span className="font-mono text-green-deep font-bold">{current.act}:</span>{' '}
+                    <span className="text-ink-muted font-sans">{current.complianceNote}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Proof Metrics */}
+            <div className="mt-6 pt-4 border-t border-border flex items-center justify-between text-xs font-mono text-ink-muted flex-wrap gap-3">
+              <span className="flex items-center gap-1.5 text-ink font-medium">
+                <span className="text-green-deep font-bold">18s</span> Automated Turnaround
+              </span>
+              <span className="flex items-center gap-1.5 text-ink font-medium">
+                <span className="text-green-deep font-bold">0%</span> Fabrication Invariant
+              </span>
+              <span className="flex items-center gap-1.5 text-ink font-medium">
+                <span className="text-green-deep font-bold">28</span> Verified Sections
+              </span>
             </div>
           </div>
 
-          {/* Right Column: Creative Quick Explorer Cards (5 Cols) */}
-          <div className="lg:col-span-5 space-y-6">
-            {/* Card 1: Statutory Lock */}
-            <div className="border border-border rounded-xs bg-paper p-6 shadow-xs relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-brass/10 rounded-bl-full pointer-events-none" />
-              <div className="text-xs font-mono font-bold text-brass uppercase tracking-wider">
-                Integrity Guarantee
+          {/* Right Column: Inspiring Chamber Value & "See Plans" Pathway (5 Cols) */}
+          <div className="lg:col-span-5 flex flex-col justify-between gap-6">
+            {/* Value Card: Institutional ROI */}
+            <div className="rounded-2xl border border-border bg-paper p-6 sm:p-7 shadow-xs space-y-4">
+              <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-brass uppercase tracking-wider">
+                <span>✦ Chamber ROI & Protection</span>
               </div>
-              <h3 className="font-heading text-lg font-bold text-green-deep mt-1">
-                Zero-Fabrication Citation Gate
+              <h3 className="font-heading text-xl font-bold text-green-deep">
+                {lang === 'bn'
+                  ? 'ঘণ্টার পর ঘণ্টা ম্যানুয়াল অনুসন্ধানের অবসান'
+                  : 'Eliminate 4+ Hours of Manual Deed Cross-Checking'}
               </h3>
-              <p className="text-xs text-ink-muted mt-2 font-sans leading-relaxed">
-                Fabricated case citations or hallucinated legal sections create lethal title defects. Nothi AI deterministically validates every citation against our verified 28-section statutory corpus.
+              <p className="text-xs sm:text-sm text-ink-muted font-sans leading-relaxed">
+                {lang === 'bn'
+                  ? 'তফসিলের দাগের অমিল, ৪ মাসের রেজিস্ট্রেশন সময়সীমা ও জাল দলিলের অপরাধ প্রতিরোধ আইন এক ক্লিকে পরীক্ষা করুন। প্রতিটি অনুসন্ধান আইনে আবদ্ধ।'
+                  : 'Instantly cross-audit deed recitals against collectorate Record of Rights ledgers. Detect Dag mismatches, calculate Section 23 deadlines, and screen penal liabilities before loan sanction or title registration.'}
               </p>
-              <div className="mt-4 flex items-center gap-3">
-                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-xs bg-green-deep/10 text-green-deep border border-green-deep/20">
-                  28 Sections
-                </span>
-                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-xs bg-brass/15 text-ink border border-brass/30">
-                  4 Acts
-                </span>
-                <Link
-                  href="#citations"
-                  className="text-xs font-sans text-green-deep hover:underline ml-auto font-medium"
-                >
-                  Test checkpoint &darr;
-                </Link>
+              <div className="pt-2 flex items-center gap-2 font-sans text-xs text-ink font-medium">
+                <span className="text-green-deep font-bold">✓</span>
+                <span>Sub-registry deed vetting</span>
+                <span className="text-ink-muted">•</span>
+                <span className="text-green-deep font-bold">✓</span>
+                <span>Bank loan vetting opinions</span>
               </div>
             </div>
 
-            {/* Card 2: Interactive AI Assistant Card */}
-            <div className="border-2 border-green-deep/40 rounded-xs bg-gradient-to-br from-paper-light via-paper to-brass/10 p-6 shadow-md space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-brass animate-pulse" />
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-green-deep">
-                  Dedicated AI Legal Assistant
-                </span>
+            {/* HIGH-IMPACT INSPIRATION CARD: EXPLORE PLANS */}
+            <div className="rounded-2xl border-2 border-brass/50 bg-gradient-to-br from-paper-light via-paper to-brass/15 p-6 sm:p-7 shadow-md space-y-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-brass/10 rounded-bl-full pointer-events-none" />
+
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brass/20 text-ink text-xs font-mono font-bold">
+                <span>Chamber & Corporate Packages</span>
               </div>
-              <h3 className="font-heading text-xl font-bold text-green-deep">
-                {lang === 'bn' ? 'নথি এআই চ্যাট সহকারীর সাথে কথা বলুন' : 'Interactive Statutory Chat Workspace'}
-              </h3>
-              <p className="text-xs text-ink-muted font-sans leading-relaxed">
+
+              <h3 className="font-heading text-xl sm:text-2xl font-bold text-green-deep">
                 {lang === 'bn'
-                  ? 'আপনার দলিলের ছবি বা পিডিএফ আপলোড করুন, ধারা ২৩ এর সময়সীমা এবং খতিয়ান সংক্রান্ত প্রশ্ন করুন।'
-                  : 'Drop deed photos or PDFs, examine 4-month presentation windows, verify NID formats, and save multiple chat sessions.'}
+                  ? 'আপনার চেম্বারের উপযোগী পরিকল্পনা বেছে নিন'
+                  : 'Tailored Plans for Advocates, Chambers & Banks'}
+              </h3>
+
+              <p className="text-xs sm:text-sm text-ink-muted font-sans leading-relaxed">
+                {lang === 'bn'
+                  ? 'স্বতন্ত্র আইনজীবী থেকে শুরু করে কর্পোরেট লিগ্যাল চেম্বার ও কমার্শিয়াল ব্যাংকের জন্য নমনীয় প্যাকেজ। ভ্যাট/এআইটি ইনভয়েস অন্তর্ভুক্ত।'
+                  : 'Whether you examine five title deeds a month or manage high-volume commercial loan portfolios, explore transparent tiers with formal bank VAT/AIT invoicing.'}
               </p>
-              <div className="pt-2">
+
+              {/* Direct Buttons to Explore Plans & Chat */}
+              <div className="pt-2 space-y-2.5">
+                <Link
+                  href="#pricing"
+                  className="w-full py-3.5 px-5 rounded-full bg-green-deep hover:bg-green-mid text-paper font-sans text-xs font-semibold uppercase tracking-wider text-center block transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2 group"
+                >
+                  <span>{lang === 'bn' ? 'সকল পরিকল্পনা ও প্যাকেজ দেখুন' : 'Explore Chamber Plans & Tiers'}</span>
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
+                </Link>
+
                 <Link
                   href="/chat"
-                  className="inline-flex items-center justify-center gap-2 w-full py-3 px-5 rounded-xs bg-green-deep hover:bg-green-mid text-paper font-sans text-sm font-semibold transition-all shadow-md active:scale-95 cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-full border border-border bg-paper hover:bg-paper-dark text-ink font-sans text-xs font-semibold text-center block transition-colors"
                 >
-                  <span>{lang === 'bn' ? 'এআই সহকারীর সাথে চ্যাট করুন →' : 'Launch Nothi AI Assistant →'}</span>
+                  <span>{lang === 'bn' ? 'নথি এআই চ্যাটে পরীক্ষা করুন' : 'Test Documents in Nothi AI Chat'}</span>
                 </Link>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between text-[11px] font-mono text-ink-muted">
+                <span>✓ 28 Sections Verified</span>
+                <span>✓ Formal BDT Invoicing</span>
+                <span>✓ Zero Hallucination</span>
               </div>
             </div>
           </div>
