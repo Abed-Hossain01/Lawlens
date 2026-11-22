@@ -1,6 +1,14 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
+
 export function Footer() {
+  const pathname = usePathname();
+
+  // Suppress footer on dedicated chat page to give full 100dvh height without collisions
+  if (pathname === '/chat') {
+    return null;
+  }
 
   return (
     <footer className="border-t border-border bg-paper-dark no-print">

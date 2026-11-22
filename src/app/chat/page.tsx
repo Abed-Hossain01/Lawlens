@@ -1,12 +1,27 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useMemo, KeyboardEvent, DragEvent, ChangeEvent } from 'react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  useSyncExternalStore,
+  KeyboardEvent,
+  DragEvent,
+  ChangeEvent,
+} from 'react';
 import Link from 'next/link';
 import { useLang } from '@/lib/lang';
-import { Logo } from '@/components/Logo';
+import { AnimatedLogo, LogoState } from '@/components/chat/AnimatedLogo';
+import { CorpusListModal } from '@/components/chat/CorpusListModal';
+import { CitationPopover } from '@/components/chat/CitationPopover';
+import { ThinkingStageIndicator, PipelineStage } from '@/components/chat/ThinkingStageIndicator';
+import { StreamingTextRenderer } from '@/components/chat/StreamingTextRenderer';
+import { VoiceInputButton } from '@/components/chat/VoiceInputButton';
+import { ChatSessionMenu } from '@/components/chat/ChatSessionMenu';
 import { DrawerDetailModal } from '@/components/landing/citation-gate/DrawerDetailModal';
-import { sendChatMessage, ChatMessage, ChatAttachment } from '@/lib/chat';
-import { getCorpusSectionById, resolveCanonicalId } from '@/lib/citations';
+import { sendChatMessage, ChatMessage, ChatAttachment, ChatCitation } from '@/lib/chat';
 import type { CorpusSection } from '@/types';
 
 interface ChatSession {
@@ -24,41 +39,29 @@ function nowTimestamp(): number {
   return Date.now();
 }
 
-const STORAGE_SESSIONS_KEY = 'nothi_ai_sessions_v2';
+const STORAGE_SESSIONS_KEY = 'nothi_ai_sessions_v3';
 const ACTIVE_SESSION_ID_KEY = 'nothi_ai_active_session_id';
 
-const SUGGESTED_CARDS = [
+const emptySubscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
+const EMPTY_SUGGESTIONS = [
   {
-    icon: '📑',
-    titleEn: 'Saf Kabala Deed Presentation Window',
-    titleBn: 'সাফ কবলা দলিলের রেজিস্ট্রেশন সময়সীমা',
-    promptEn: 'How long can pass between signing and registering a Saf Kabala deed under Section 23?',
-    promptBn: 'রেজিস্ট্রেশন আইন ১৯০৮ এর ধারা ২৩ অনুযায়ী সাফ কবলা দলিল সম্পাদনের পর কতদিনের মধ্যে তা রেজিস্ট্রি করতে হবে?',
-    rule: 'Registration Act 1908 (Sec. 23)',
+    textEn: 'How long can pass between signing and registering a Saf Kabala deed?',
+    textBn: 'সাফ কবলা দলিল সম্পাদনের পর কতদিনের মধ্যে তা রেজিস্ট্রি করতে হবে?',
   },
   {
-    icon: '🪪',
-    titleEn: 'National ID Format Parity',
-    titleBn: 'জাতীয় পরিচয়পত্রের ফরম্যাট বৈধতা',
-    promptEn: 'What makes an NID number structurally valid under Rule 3 of the NIDW Rules?',
-    promptBn: 'এনআইডি বিধিমালা ২০১০ এর বিধি ৩ অনুসারে জাতীয় পরিচয়পত্রের কোন ফরম্যাটগুলো সংবিধিবদ্ধভাবে বৈধ?',
-    rule: 'NIDW Rules 2010 (Rule 3)',
+    textEn: 'What makes an NID number valid under Rule 3?',
+    textBn: 'এনআইডি বিধিমালা ২০১০ এর বিধি ৩ অনুসারে কোন পরিচয়পত্র বৈধ?',
   },
   {
-    icon: '⚖️',
-    titleEn: 'Lis Pendens Litigation Risk',
-    titleBn: 'বিচারাধীন মামলার ঝুঁকি (Lis Pendens)',
-    promptEn: 'What are the legal consequences of transferring land during a pending court suit under Section 52?',
-    promptBn: 'সম্পত্তি হস্তান্তর আইন ১৮৮২ এর ধারা ৫২ (Lis Pendens) অনুযায়ী বিচারাধীন মামলায় জমি কেনার ঝুঁকি কী?',
-    rule: 'Transfer of Property Act 1882 (Sec. 52)',
+    textEn: 'What does a Dag number mismatch mean?',
+    textBn: 'দলিল ও খতিয়ানের দাগ নম্বরের গরমিলের আইনি ফলাফল কী?',
   },
   {
-    icon: '📜',
-    titleEn: 'Khatian Dag Plot Matching',
-    titleBn: 'খতিয়ানের দাগ নম্বর গরমিল ও যাচাই',
-    promptEn: 'What does a Dag number mismatch between a Saf Kabala deed and RS Khatian indicate?',
-    promptBn: 'সাফ কবলা দলিলের তফসিলের সাথে আরএস খতিয়ানের দাগ নম্বরের গরমিল থাকলে করণীয় কী?',
-    rule: 'TPA 1882 (Sec. 54) & Reg Act (Sec. 17)',
+    textEn: 'What is a Khatian used for in property conveyance?',
+    textBn: 'সম্পত্তি হস্তান্তরে খতিয়ান (স্বত্বলিপির) মূল ভূমিকা কী?',
   },
 ];
 
@@ -68,22 +71,35 @@ export default function ChatPage() {
   // Sessions & Active Chat State
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
 
   // Input & Attachment States
   const [inputText, setInputText] = useState('');
-  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [attachments, setAttachments] = useState<
+    (ChatAttachment & { uploadProgress?: number })[]
+  >([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
+
+  // Pipeline Thinking & Streaming States
+  const [isThinking, setIsThinking] = useState(false);
+  const [thinkingStage, setThinkingStage] = useState<PipelineStage>('reading');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isErrorState, setIsErrorState] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+  const [logoState, setLogoState] = useState<LogoState>('idle');
 
   // Modal & Inspector States
   const [activeCitationSection, setActiveCitationSection] = useState<CorpusSection | null>(null);
+  const [corpusListOpen, setCorpusListOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [feedbackState, setFeedbackState] = useState<Record<string, 'up' | 'down'>>({});
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<boolean>(false);
@@ -101,7 +117,7 @@ export default function ChatPage() {
         if (!parsedSessions || parsedSessions.length === 0) {
           const initialSession: ChatSession = {
             id: makeId('session'),
-            title: lang === 'bn' ? 'নতুন কথোপকথন' : 'New Property Examination',
+            title: lang === 'bn' ? 'দলিল পরীক্ষণ' : 'Property Record Check',
             createdAt: nowTimestamp(),
             messages: [],
           };
@@ -118,23 +134,26 @@ export default function ChatPage() {
           setActiveSessionId(parsedSessions[0].id);
         }
       } catch (err) {
-        console.warn('Could not load sessions:', err);
+        console.warn('Could not load chat sessions:', err);
       }
     });
   }, [lang]);
 
-  // Save sessions to localStorage whenever they update
-  const persistSessions = useCallback((updated: ChatSession[], newActiveId?: string) => {
-    setSessions(updated);
-    try {
-      localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(updated));
-      if (newActiveId) {
-        localStorage.setItem(ACTIVE_SESSION_ID_KEY, newActiveId);
+  // Persist sessions helper
+  const persistSessions = useCallback(
+    (updated: ChatSession[], newActiveId?: string) => {
+      setSessions(updated);
+      try {
+        localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(updated));
+        if (newActiveId) {
+          localStorage.setItem(ACTIVE_SESSION_ID_KEY, newActiveId);
+        }
+      } catch (err) {
+        console.warn('Could not persist sessions:', err);
       }
-    } catch (err) {
-      console.warn('Could not persist sessions:', err);
-    }
-  }, []);
+    },
+    []
+  );
 
   const activeSession = useMemo(
     () => sessions.find((s) => s.id === activeSessionId) || sessions[0],
@@ -142,24 +161,37 @@ export default function ChatPage() {
   );
   const messages = useMemo(() => activeSession?.messages || [], [activeSession]);
 
-  // Scroll to bottom on new messages
+  // Track scroll position for "Jump to latest"
+  const handleScroll = () => {
+    if (!chatScrollContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatScrollContainerRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 120;
+    setShowScrollBottom(!isNearBottom);
+  };
+
+  const scrollToBottom = (smooth = true) => {
+    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+  };
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isStreaming]);
+    if (!showScrollBottom) {
+      scrollToBottom();
+    }
+  }, [messages, isThinking, isStreaming, showScrollBottom]);
 
   // Adjust textarea height dynamically
   const adjustTextarea = () => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
     }
   };
 
-  // ── 2. NEW CHAT & SESSION SWITCHING ───────────────────────────
+  // ── 2. NEW CHAT & SESSION MANAGEMENT ──────────────────────────
   const handleNewChat = () => {
     const newSession: ChatSession = {
       id: makeId('session'),
-      title: lang === 'bn' ? 'নতুন কথোপকথন' : 'New Property Examination',
+      title: lang === 'bn' ? 'নতুন দলিল পরীক্ষণ' : 'New Property Examination',
       createdAt: nowTimestamp(),
       messages: [],
     };
@@ -168,17 +200,30 @@ export default function ChatPage() {
     setActiveSessionId(newSession.id);
     setInputText('');
     setAttachments([]);
+    setAttachmentError(null);
+    setIsThinking(false);
+    setIsStreaming(false);
+    setStreamingText('');
+    setLogoState('idle');
     if (window.innerWidth < 768) setSidebarOpen(false);
   };
 
   const handleSelectSession = (id: string) => {
     setActiveSessionId(id);
     localStorage.setItem(ACTIVE_SESSION_ID_KEY, id);
+    setIsThinking(false);
+    setIsStreaming(false);
+    setStreamingText('');
+    setLogoState('idle');
     if (window.innerWidth < 768) setSidebarOpen(false);
   };
 
-  const handleDeleteSession = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleRenameSession = (id: string, newTitle: string) => {
+    const updated = sessions.map((s) => (s.id === id ? { ...s, title: newTitle } : s));
+    persistSessions(updated);
+  };
+
+  const handleDeleteSession = (id: string) => {
     const remaining = sessions.filter((s) => s.id !== id);
     if (remaining.length === 0) {
       handleNewChat();
@@ -189,45 +234,98 @@ export default function ChatPage() {
     setActiveSessionId(nextActive);
   };
 
-  // ── 3. FILE ATTACHMENTS (PICTURES & PDFS) ──────────────────────
+  // ── 3. DATE GROUPING FOR CONVERSATION LIST ────────────────────
+  const groupedSessions = useMemo(() => {
+    if (!mounted) {
+      return sessions.length > 0 ? [{ label: 'Conversations', items: sessions }] : [];
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const lastWeek = new Date(today);
+    lastWeek.setDate(lastWeek.getDate() - 7);
+
+    const groups: { label: string; items: ChatSession[] }[] = [
+      { label: 'Today', items: [] },
+      { label: 'Yesterday', items: [] },
+      { label: 'Previous 7 days', items: [] },
+      { label: 'Older', items: [] },
+    ];
+
+    sessions.forEach((s) => {
+      const date = new Date(s.createdAt);
+      if (date >= today) groups[0].items.push(s);
+      else if (date >= yesterday) groups[1].items.push(s);
+      else if (date >= lastWeek) groups[2].items.push(s);
+      else groups[3].items.push(s);
+    });
+
+    return groups.filter((g) => g.items.length > 0);
+  }, [sessions, mounted]);
+
+  // ── 4. FILE ATTACHMENTS (MAX 3, 15MB EACH) ────────────────────
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    setAttachmentError(null);
+
+    const maxFiles = 3;
+    const maxSize = 15 * 1024 * 1024; // 15 MB
+
+    if (attachments.length + files.length > maxFiles) {
+      setAttachmentError(`Maximum ${maxFiles} documents allowed per message.`);
+      return;
+    }
 
     Array.from(files).forEach((file) => {
       const isImg = file.type.startsWith('image/');
       const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf');
 
       if (!isImg && !isPdf) {
-        alert('Please attach JPG, PNG image scans or PDF deed documents.');
+        setAttachmentError(`"${file.name}" is not a valid format. Only PDF, JPG, and PNG are supported.`);
         return;
       }
 
+      if (file.size > maxSize) {
+        setAttachmentError(`"${file.name}" exceeds 15 MB size limit.`);
+        return;
+      }
+
+      const tempId = makeId('att');
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        const newAttachment: ChatAttachment = {
-          id: makeId('att'),
+
+      // Show immediate progress card
+      setAttachments((prev) => [
+        ...prev,
+        {
+          id: tempId,
           name: file.name,
           type: isImg ? 'image' : 'pdf',
           size: file.size,
-          dataUrl: isImg ? dataUrl : undefined,
-        };
+          uploadProgress: 45,
+        },
+      ]);
 
-        setAttachments((prev) => [...prev, newAttachment]);
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setAttachments((prev) =>
+          prev.map((a) =>
+            a.id === tempId
+              ? {
+                  ...a,
+                  uploadProgress: 100,
+                  dataUrl: isImg ? dataUrl : undefined,
+                }
+              : a
+          )
+        );
       };
 
       if (isImg) {
         reader.readAsDataURL(file);
       } else {
-        // Read small mock representation or text
-        reader.readAsArrayBuffer(file.slice(0, 1024));
-        const newAttachment: ChatAttachment = {
-          id: makeId('att'),
-          name: file.name,
-          type: 'pdf',
-          size: file.size,
-        };
-        setAttachments((prev) => [...prev, newAttachment]);
+        reader.readAsArrayBuffer(file.slice(0, 512));
       }
     });
   };
@@ -236,128 +334,191 @@ export default function ChatPage() {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  // Drag and Drop handlers
+  // Drag and Drop
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
   };
-
   const handleDragLeave = (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
   };
-
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     handleFiles(e.dataTransfer.files);
   };
 
-  // ── 4. SEND MESSAGE & STREAMING SIMULATION ─────────────────────
+  // ── 5. MEANINGFUL AUTO-TITLING ────────────────────────────────
+  const generateMeaningfulTitle = (content: string, firstFileName?: string) => {
+    const lower = content.toLowerCase();
+    if (lower.includes('23') || lower.includes('signing and registering') || lower.includes('presentation')) {
+      return 'Deed Presentation Window (Sec. 23)';
+    }
+    if (lower.includes('nid') || lower.includes('identity') || lower.includes('rule 3')) {
+      return 'NID Digit Parity Check';
+    }
+    if (lower.includes('dag') || lower.includes('plot') || lower.includes('mismatch')) {
+      return 'Dag Number Schedule Parity';
+    }
+    if (lower.includes('khatian') || lower.includes('porcha')) {
+      return 'Collectorate Khatian Title Chain';
+    }
+    if (lower.includes('lis pendens') || lower.includes('suit') || lower.includes('52')) {
+      return 'Lis Pendens Litigation Check (Sec. 52)';
+    }
+    if (lower.includes('forged') || lower.includes('fake') || lower.includes('crime')) {
+      return 'Forged Deed Penal Liabilities';
+    }
+    if (firstFileName) {
+      return `Vetting: ${firstFileName.substring(0, 30)}`;
+    }
+    // Clean, sanitize, take first 38 characters
+    const cleaned = content.replace(/[^a-zA-Z0-9\u0980-\u09FF\s]/g, '').trim();
+    if (cleaned.length > 3) {
+      return cleaned.substring(0, 38) + (cleaned.length > 38 ? '...' : '');
+    }
+    return 'Property Examination';
+  };
+
+  // ── 6. THINKING PIPELINE & STREAMING LOGIC ────────────────────
   const handleSendMessage = async (textToSend?: string) => {
     const content = (textToSend !== undefined ? textToSend : inputText).trim();
     if (!content && attachments.length === 0) return;
-    if (isStreaming) return;
+    if (isStreaming || isThinking) return;
 
     abortControllerRef.current = false;
     const currentAttachments = [...attachments];
     setInputText('');
     setAttachments([]);
+    setAttachmentError(null);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
     const currentNow = nowTimestamp();
     const userMessage: ChatMessage = {
       id: makeId('msg_user'),
       role: 'user',
-      content: content || (currentAttachments.length > 0 ? `Uploaded ${currentAttachments.length} document file(s) for verification.` : ''),
+      content: content || (currentAttachments.length > 0 ? `Uploaded ${currentAttachments.length} document file(s) for examination.` : ''),
       attachments: currentAttachments.length > 0 ? currentAttachments : undefined,
       timestamp: currentNow,
     };
 
-    const assistantPlaceholderId = makeId('msg_asst');
-    const assistantMessage: ChatMessage = {
-      id: assistantPlaceholderId,
-      role: 'assistant',
-      content: '',
-      citations: [],
-      timestamp: currentNow,
-    };
+    // Auto-title session if this is the first message
+    const isFirst = messages.length === 0;
+    const newTitle = isFirst ? generateMeaningfulTitle(content, currentAttachments[0]?.name) : activeSession.title;
 
-    // Update active session title if it's the first message
-    const currentSession = sessions.find((s) => s.id === activeSessionId);
-    let sessionTitle = currentSession?.title || 'Property Examination';
-    if (!currentSession || currentSession.messages.length === 0) {
-      sessionTitle = content.length > 35 ? content.substring(0, 35) + '...' : content || currentAttachments[0]?.name || 'Document Examination';
-    }
+    // Immediately append user message with 180ms smooth entrance
+    const updatedMessagesWithUser = [...messages, userMessage];
+    const updatedSessionsWithUser = sessions.map((s) =>
+      s.id === activeSessionId
+        ? { ...s, title: newTitle, messages: updatedMessagesWithUser }
+        : s
+    );
+    persistSessions(updatedSessionsWithUser);
 
-    const updatedMessages = [...messages, userMessage, assistantMessage];
-    const updatedSessions = sessions.map((s) => {
-      if (s.id === activeSessionId) {
-        return {
-          ...s,
-          title: sessionTitle,
-          messages: updatedMessages,
-        };
-      }
-      return s;
-    });
+    // ── STAGE 1: THINKING SEQUENCE ──────────────────────────────
+    setIsThinking(true);
+    setLogoState('thinking');
+    setIsErrorState(false);
 
-    persistSessions(updatedSessions);
+    // Execute real pipeline stages with minimum 500ms duration for readability
+    setThinkingStage('reading');
+    await new Promise((r) => setTimeout(r, 500));
+    if (abortControllerRef.current) return;
+
+    setThinkingStage('searching');
+    await new Promise((r) => setTimeout(r, 550));
+    if (abortControllerRef.current) return;
+
+    setThinkingStage('checking');
+    await new Promise((r) => setTimeout(r, 500));
+    if (abortControllerRef.current) return;
+
+    setThinkingStage('writing');
+    await new Promise((r) => setTimeout(r, 200));
+    if (abortControllerRef.current) return;
+
+    // ── STAGE 2: STREAMING WORD-BY-WORD ─────────────────────────
+    setIsThinking(false);
     setIsStreaming(true);
+    setStreamingText('');
+
+    let accumulatedText = '';
+    let responseCitations: ChatCitation[] = [];
 
     try {
-      let accumulatedText = '';
       const response = await sendChatMessage(
-        [...messages, userMessage],
+        updatedMessagesWithUser,
         lang,
         (chunk) => {
           if (abortControllerRef.current) return;
           accumulatedText += chunk;
-          setSessions((prev) =>
-            prev.map((s) => {
-              if (s.id === activeSessionId) {
-                return {
-                  ...s,
-                  messages: s.messages.map((m) =>
-                    m.id === assistantPlaceholderId
-                      ? { ...m, content: accumulatedText }
-                      : m
-                  ),
-                };
-              }
-              return s;
-            })
-          );
+          setStreamingText(accumulatedText);
         }
       );
 
-      // Finalize with strictly verified citations
-      setSessions((prev) => {
-        const finalized = prev.map((s) => {
-          if (s.id === activeSessionId) {
-            return {
-              ...s,
-              messages: s.messages.map((m) =>
-                m.id === assistantPlaceholderId
-                  ? {
-                      ...m,
-                      content: response.content,
-                      citations: response.citations,
-                    }
-                  : m
-              ),
-            };
-          }
-          return s;
-        });
-        localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(finalized));
-        return finalized;
-      });
+      responseCitations = response.citations;
+
+      // Check if out-of-corpus error
+      if (response.citations.length === 0 && response.content.includes("cannot find this topic")) {
+        setLogoState('error');
+        await new Promise((r) => setTimeout(r, 600));
+      } else {
+        setLogoState('answered');
+        await new Promise((r) => setTimeout(r, 500));
+      }
     } catch (err) {
-      console.error('Error generating response:', err);
+      console.error('Error in sendChatMessage:', err);
+      setIsErrorState(true);
+      setLogoState('error');
     } finally {
       setIsStreaming(false);
+
+      if (!abortControllerRef.current) {
+        const assistantMessage: ChatMessage = {
+          id: makeId('msg_asst'),
+          role: 'assistant',
+          content: accumulatedText,
+          citations: responseCitations,
+          timestamp: nowTimestamp(),
+        };
+
+        const finalizedMessages = [...updatedMessagesWithUser, assistantMessage];
+        const finalizedSessions = sessions.map((s) =>
+          s.id === activeSessionId ? { ...s, messages: finalizedMessages } : s
+        );
+        persistSessions(finalizedSessions);
+        setStreamingText('');
+        setLogoState('idle');
+      }
     }
+  };
+
+  const handleStop = () => {
+    abortControllerRef.current = true;
+    setIsThinking(false);
+    setIsStreaming(false);
+
+    if (streamingText.trim()) {
+      const partialMessage: ChatMessage = {
+        id: makeId('msg_asst_stopped'),
+        role: 'assistant',
+        content: streamingText + ' [Stopped]',
+        citations: [],
+        timestamp: nowTimestamp(),
+      };
+      const finalized = [...messages, partialMessage];
+      const updated = sessions.map((s) =>
+        s.id === activeSessionId ? { ...s, messages: finalized } : s
+      );
+      persistSessions(updated);
+    }
+    setStreamingText('');
+    setLogoState('idle');
+  };
+
+  const handleRegenerate = async (lastUserText: string) => {
+    handleSendMessage(lastUserText);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -367,597 +528,624 @@ export default function ChatPage() {
     }
   };
 
-  const stopStreaming = () => {
-    abortControllerRef.current = true;
-    setIsStreaming(false);
-  };
-
-  // ── 5. STATUTORY CITATION INSPECTOR MODAL ─────────────────────
-  const inspectCitation = (id: string) => {
-    const canonical = resolveCanonicalId(id);
-    const section = getCorpusSectionById(canonical);
-    if (section) {
-      setActiveCitationSection(section);
-    }
-  };
-
-  // ── 6. UTILITIES: COPY, VOICE, EXPORT ─────────────────────────
   const copyMessage = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedMessageId(id);
     setTimeout(() => setCopiedMessageId(null), 2000);
   };
 
-  const toggleVoiceRecording = () => {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      alert('Speech recognition is not supported in this browser.');
-      return;
-    }
-    if (isRecording) {
-      setIsRecording(false);
-    } else {
-      setIsRecording(true);
-      setTimeout(() => {
-        setIsRecording(false);
-        setInputText((prev) => (prev ? prev + ' ' : '') + 'Saf Kabala deed registration deadline under section 23');
-      }, 2500);
-    }
-  };
-
-  const exportConversation = () => {
-    if (!messages.length) return;
-    const transcript = messages
-      .map(
-        (m) =>
-          `[${new Date(m.timestamp).toLocaleTimeString()}] ${m.role === 'user' ? 'COUNSEL' : 'NOTHI AI'}:\n${m.content}\n${
-            m.citations?.length
-              ? `CITATIONS: ${m.citations.map((c) => `${c.act} (${c.section})`).join(', ')}\n`
-              : ''
-          }`
-      )
-      .join('\n---\n\n');
-
-    const blob = new Blob([transcript], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Nothi_AI_Chat_${activeSession.title.replace(/\s+/g, '_')}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div
-      className="flex h-[calc(100vh-60px)] md:h-[calc(100vh-72px)] bg-[#f7f4ed] text-ink overflow-hidden select-none"
+      className="flex flex-col h-[100dvh] bg-[#fbf9f5] text-ink overflow-hidden select-none font-sans"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {/* ── DRAG AND DROP FULLSCREEN OVERLAY ── */}
       {isDragging && (
-        <div className="absolute inset-0 z-50 bg-green-deep/80 backdrop-blur-xs flex flex-col items-center justify-center text-paper border-4 border-dashed border-brass pointer-events-none animate-in fade-in duration-150">
-          <div className="text-5xl mb-3">📂</div>
-          <h3 className="font-heading text-2xl font-bold">Drop Property Documents Here</h3>
-          <p className="text-sm font-sans opacity-90 mt-1">
-            Accepts deed scans (JPG, PNG) and Khatian ledgers (PDF) up to 15 MB
+        <div className="fixed inset-0 z-50 bg-green-deep/85 backdrop-blur-xs flex flex-col items-center justify-center text-paper border-4 border-dashed border-brass pointer-events-none animate-in fade-in duration-150">
+          <div className="w-16 h-16 rounded-full bg-paper/10 flex items-center justify-center mb-3 text-3xl">
+            📂
+          </div>
+          <h3 className="font-heading text-2xl font-bold">Drop property documents here</h3>
+          <p className="text-sm font-sans text-paper-dark mt-1">
+            Accepts Saf Kabala deed scans, Khatian ledgers, and NID cards (PDF, JPG, PNG up to 15 MB)
           </p>
         </div>
       )}
 
-      {/* ── 1. COLLAPSIBLE GEMINI-STYLE SIDEBAR ── */}
-      <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-paper border-r border-border flex flex-col justify-between transition-transform duration-200 ease-in-out shadow-lg md:shadow-none ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:-ml-72'
-        }`}
-      >
-        <div className="flex flex-col h-full overflow-hidden">
-          {/* Top Bar inside Sidebar: Logo & Collapse Button */}
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 no-underline">
-              <Logo />
-            </Link>
+      {/* ── 1. SINGLE UNIFIED HEADER (TOP BAR) ── */}
+      <header className="h-[60px] md:h-[64px] border-b border-border bg-paper/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
+        {/* Left: Sidebar Toggle & Animated Logo Wordmark */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 rounded-xs border border-border text-ink hover:bg-paper-dark transition-colors cursor-pointer"
+            title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+            aria-label="Toggle conversation sidebar"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              className="md:hidden p-1.5 rounded-xs text-ink-muted hover:text-ink hover:bg-paper-dark"
-              title="Close sidebar"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* New Chat Button (Pill shaped, like Gemini) */}
-          <div className="p-3">
-            <button
-              type="button"
-              onClick={handleNewChat}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-full bg-paper-dark hover:bg-border/60 text-ink font-sans text-sm font-semibold transition-all border border-border shadow-xs cursor-pointer active:scale-98"
-            >
-              <span className="text-lg leading-none font-bold text-green-deep">+</span>
-              <span>{lang === 'bn' ? 'নতুন কথোপকথন' : 'New chat'}</span>
-            </button>
-          </div>
-
-          {/* Recent Conversations List */}
-          <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
-            <div className="px-3 py-1 text-[11px] font-mono uppercase tracking-wider text-ink-muted">
-              {lang === 'bn' ? 'সাম্প্রতিক পরীক্ষণ' : 'Recent Examinations'}
-            </div>
-
-            {sessions.map((session) => {
-              const isActive = session.id === activeSessionId;
-              return (
-                <div
-                  key={session.id}
-                  onClick={() => handleSelectSession(session.id)}
-                  className={`group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-sans transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-green-deep text-paper font-semibold shadow-xs'
-                      : 'text-ink hover:bg-paper-dark/70'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <span className="text-sm shrink-0">{isActive ? '💬' : '📄'}</span>
-                    <span className="truncate">{session.title}</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={(e) => handleDeleteSession(session.id, e)}
-                    className={`opacity-0 group-hover:opacity-100 p-1 rounded-xs transition-opacity hover:text-vermillion ${
-                      isActive ? 'text-paper hover:bg-white/20' : 'text-ink-muted hover:bg-paper'
-                    }`}
-                    title="Delete chat"
-                  >
-                    🗑
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Sidebar Footer: Corpus Badge & Home Link */}
-          <div className="p-3 border-t border-border bg-paper-light space-y-2">
-            <div className="flex items-center justify-between text-[11px] font-mono px-2 py-1 rounded-xs bg-paper border border-border">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-green-deep" />
-                <span className="text-ink font-semibold">Corpus Active</span>
-              </span>
-              <span className="text-ink-muted">28 Sections</span>
-            </div>
-
-            <Link
-              href="/"
-              className="flex items-center justify-between px-3 py-2 rounded-xs text-xs font-sans text-ink-muted hover:text-ink hover:bg-paper transition-colors"
-            >
-              <span>← {lang === 'bn' ? 'হোমপেজে ফিরুন' : 'Back to Home'}</span>
-              <span className="font-mono text-[10px]">Nothi AI</span>
-            </Link>
-          </div>
+          <Link href="/" className="no-underline flex items-center" aria-label="Nothi AI Home">
+            <AnimatedLogo state={logoState} size={28} showWordmark={true} />
+          </Link>
         </div>
-      </aside>
 
-      {/* ── 2. MAIN CHAT WORKSPACE AREA ── */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Workspace Top Header Bar */}
-        <header className="h-14 border-b border-border bg-paper/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0 z-10">
-          <div className="flex items-center gap-3">
-            {/* Sidebar toggle button */}
+        {/* Center/Right Controls: Single Quiet Corpus Text, Language Switch, New Chat, Home Link */}
+        <div className="flex items-center gap-2.5 sm:gap-4">
+          {/* Quiet 28 Verified Sections Link */}
+          <button
+            type="button"
+            onClick={() => setCorpusListOpen(true)}
+            className="hidden sm:inline-flex items-center gap-1.5 text-xs font-sans text-ink-muted hover:text-green-deep transition-colors cursor-pointer px-2 py-1 rounded-xs hover:bg-paper-dark"
+            title="View verified statutory sections"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-green-deep" />
+            <span>28 verified sections</span>
+          </button>
+
+          {/* Single Header EN / বাং Language Toggle */}
+          <div
+            role="radiogroup"
+            aria-label="Select interface language"
+            className="inline-flex p-0.5 rounded-xs border border-border bg-paper-dark"
+          >
             <button
               type="button"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg text-ink hover:bg-paper-dark transition-colors cursor-pointer"
-              title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+              role="radio"
+              aria-checked={lang === 'en'}
+              onClick={() => setLang('en')}
+              className={`px-2 py-0.5 rounded-xs text-xs font-sans transition-all cursor-pointer ${
+                lang === 'en'
+                  ? 'bg-green-deep text-paper font-semibold shadow-2xs'
+                  : 'text-ink-muted hover:text-ink'
+              }`}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              EN
             </button>
-
-            {/* Model Badge */}
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-paper-dark border border-border text-xs font-sans font-semibold text-green-deep">
-              <span>✦</span>
-              <span>Nothi AI 1.0 (Statutory Land Law)</span>
-              <span className="hidden sm:inline text-[10px] font-mono text-ink-muted font-normal">
-                • 28 Sections
-              </span>
-            </div>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={lang === 'bn'}
+              onClick={() => setLang('bn')}
+              className={`px-2 py-0.5 rounded-xs text-xs font-bangla transition-all cursor-pointer ${
+                lang === 'bn'
+                  ? 'bg-green-deep text-paper font-semibold shadow-2xs'
+                  : 'text-ink-muted hover:text-ink'
+              }`}
+            >
+              বাং
+            </button>
           </div>
 
-          {/* Top Right Controls */}
-          <div className="flex items-center gap-2">
-            {/* Bilingual Switcher */}
-            <button
-              type="button"
-              onClick={() => setLang(lang === 'en' ? 'bn' : 'en')}
-              className="px-2.5 py-1 rounded-xs border border-border bg-paper text-xs font-sans hover:bg-paper-dark transition-colors cursor-pointer"
-              title="Toggle language"
-            >
-              {lang === 'en' ? 'বাংলা' : 'English'}
-            </button>
+          {/* New Chat Button */}
+          <button
+            type="button"
+            onClick={handleNewChat}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs bg-paper border border-border hover:bg-paper-dark text-xs font-sans font-medium text-ink transition-colors cursor-pointer"
+            title="Start a new chat"
+          >
+            <span>+</span>
+            <span>{lang === 'bn' ? 'নতুন' : 'New chat'}</span>
+          </button>
 
-            {/* Export conversation */}
-            {messages.length > 0 && (
+          {/* Exit / Home link */}
+          <Link
+            href="/"
+            className="text-xs font-sans text-ink-muted hover:text-ink px-2 py-1 transition-colors"
+            title="Return to Nothi AI landing page"
+          >
+            {lang === 'bn' ? 'প্রস্থান' : 'Exit'}
+          </Link>
+        </div>
+      </header>
+
+      {/* ── 2. WORKSPACE BODY: SIDEBAR + CONVERSATION COLUMN ── */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Mobile Backdrop Overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-30 bg-ink/40 md:hidden backdrop-blur-2xs"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* ── 2A. LEFT SIDEBAR (COLLAPSIBLE 280PX, SLIDE-OVER ON MOBILE) ── */}
+        <aside
+          className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-paper border-r border-border flex flex-col justify-between transition-transform duration-200 ease-in-out shadow-lg md:shadow-none ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full md:-ml-72'
+          }`}
+          style={{ top: '60px', height: 'calc(100dvh - 60px)' }}
+        >
+          <div className="flex flex-col h-full overflow-hidden">
+            {/* Top Button: New Chat Pill */}
+            <div className="p-3 border-b border-border/80">
               <button
                 type="button"
-                onClick={exportConversation}
-                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xs border border-border bg-paper text-xs font-sans text-ink hover:bg-paper-dark transition-colors cursor-pointer"
-                title="Download conversation transcript"
+                onClick={handleNewChat}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xs bg-paper-dark hover:bg-border text-ink font-sans text-xs font-semibold transition-all border border-border shadow-2xs cursor-pointer active:scale-98"
               >
-                <span>📥</span>
-                <span>Export</span>
+                <span className="text-base leading-none font-bold text-green-deep">+</span>
+                <span>{lang === 'bn' ? 'নতুন পরীক্ষণ শুরু করুন' : 'New Examination'}</span>
+              </button>
+            </div>
+
+            {/* Conversation List with Relative Dates */}
+            <div className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
+              {groupedSessions.map((group) => (
+                <div key={group.label} className="space-y-1">
+                  <div className="px-3 text-[11px] font-sans font-semibold text-ink-muted">
+                    {group.label}
+                  </div>
+
+                  {group.items.map((session) => {
+                    const isActive = session.id === activeSessionId;
+
+                    return (
+                      <div
+                        key={session.id}
+                        onClick={() => handleSelectSession(session.id)}
+                        className={`group relative flex items-center justify-between px-3 py-2 rounded-xs text-xs font-sans transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-paper-dark border-l-2 border-green-deep text-green-deep font-semibold shadow-2xs'
+                            : 'text-ink hover:bg-paper-light'
+                        }`}
+                      >
+                        <span className="truncate pr-2">{session.title}</span>
+
+                        {/* Three dots menu */}
+                        <ChatSessionMenu
+                          sessionId={session.id}
+                          sessionTitle={session.title}
+                          onRename={handleRenameSession}
+                          onDelete={handleDeleteSession}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+
+            {/* Sidebar Safe Footer (Never Covered by Overlays) */}
+            <div className="p-4 border-t border-border bg-paper-light space-y-2 pb-8 sm:pb-5">
+              <button
+                type="button"
+                onClick={() => setCorpusListOpen(true)}
+                className="w-full flex items-center justify-between text-xs font-sans text-ink-muted hover:text-green-deep transition-colors"
+              >
+                <span>28 sections verified</span>
+                <span className="font-mono text-[10px]">laws_corpus.json</span>
+              </button>
+
+              <Link
+                href="/"
+                className="block text-xs font-sans text-ink-muted hover:text-ink transition-colors"
+              >
+                ← {lang === 'bn' ? 'হোমপেজে ফিরে যান' : 'Back to Home'}
+              </Link>
+            </div>
+          </div>
+        </aside>
+
+        {/* ── 2B. MAIN CONVERSATION COLUMN (CENTERED MAX 760PX) ── */}
+        <main
+          ref={chatScrollContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 flex flex-col h-full overflow-y-auto relative"
+          role="log"
+          aria-live="polite"
+        >
+          <div className="flex-1 flex flex-col justify-between max-w-[760px] mx-auto w-full px-4 sm:px-6 py-8">
+            {/* ── EMPTY STATE (CALM, CLEAN, NO CLIPART) ── */}
+            {messages.length === 0 && !isThinking && !isStreaming ? (
+              <div className="my-auto py-8 space-y-8 animate-in fade-in duration-200">
+                {/* Short Greeting & Scope */}
+                <div className="space-y-2">
+                  <h1 className="font-heading text-3xl sm:text-4xl font-bold text-green-deep tracking-tight">
+                    {lang === 'bn' ? 'আপনি কি যাচাই করতে চান?' : 'What would you like to check?'}
+                  </h1>
+                  <p className="font-sans text-sm sm:text-base text-ink-muted leading-relaxed">
+                    {lang === 'bn'
+                      ? 'উত্তরসমূহ কেবল বাংলাদেশের সম্পত্তি আইনের ২৮টি যাচাইকৃত ধারা থেকে প্রদান করা হয়।'
+                      : 'Answers come only from 28 verified sections of Bangladeshi property law.'}
+                  </p>
+                </div>
+
+                {/* Compact Text Suggestions with Thin Divider */}
+                <div className="border-t border-border divide-y divide-border">
+                  {EMPTY_SUGGESTIONS.map((sug, i) => {
+                    const text = lang === 'bn' ? sug.textBn : sug.textEn;
+
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => handleSendMessage(text)}
+                        className="group w-full py-3.5 flex items-center justify-between text-left font-sans text-sm text-ink hover:text-green-deep transition-colors cursor-pointer"
+                      >
+                        <span className="pr-4">{text}</span>
+                        <span className="text-ink-muted group-hover:text-brass group-hover:translate-x-1 transition-all shrink-0">
+                          →
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              /* ── ACTIVE MESSAGE LIST ── */
+              <div className="space-y-8 pb-4">
+                {messages.map((msg, idx) => {
+                  const isUser = msg.role === 'user';
+                  const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                  const isConsecutive = prevMsg?.role === msg.role;
+
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`group flex flex-col ${
+                        isUser ? 'items-end' : 'items-start'
+                      } ${isConsecutive ? 'mt-2' : 'mt-6'}`}
+                    >
+                      {/* USER MESSAGE: Bottle-Green Filled Bubble (16px, Sender Flatter Corner) */}
+                      {isUser ? (
+                        <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-tr-xs bg-green-deep text-paper p-4 text-sm font-sans leading-relaxed shadow-xs">
+                          {/* Attached files inside message */}
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div className="mb-3 space-y-1.5 pb-2 border-b border-paper/20">
+                              {msg.attachments.map((att) => (
+                                <div
+                                  key={att.id}
+                                  className="flex items-center gap-2 p-1.5 rounded-xs bg-black/15 text-xs"
+                                >
+                                  {att.type === 'image' && att.dataUrl ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setLightboxImage(att.dataUrl!)}
+                                      className="cursor-zoom-in"
+                                      title="Enlarge image"
+                                    >
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={att.dataUrl}
+                                        alt={att.name}
+                                        className="w-10 h-10 object-cover rounded-xs border border-white/30"
+                                      />
+                                    </button>
+                                  ) : (
+                                    <span className="w-8 h-8 rounded-xs bg-vermillion/40 text-paper font-mono font-bold text-[10px] flex items-center justify-center">
+                                      PDF
+                                    </span>
+                                  )}
+                                  <div className="truncate">
+                                    <div className="font-medium truncate">{att.name}</div>
+                                    <div className="text-[10px] font-mono opacity-70">
+                                      {(att.size / 1024).toFixed(1)} KB
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="whitespace-pre-wrap">{msg.content}</div>
+
+                          <div className="mt-1 text-[10px] font-mono text-paper-dark/70 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                            {mounted &&
+                              new Date(msg.timestamp).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                          </div>
+                        </div>
+                      ) : (
+                        /* ASSISTANT MESSAGE: Left-Aligned on Paper Background with Logo Avatar */
+                        <div className="w-full space-y-3 pl-0 sm:pl-1">
+                          {/* Official Document Reply Header */}
+                          <div className="flex items-center gap-2 text-xs font-sans text-ink">
+                            <AnimatedLogo state="idle" size={18} />
+                            <span className="font-semibold text-green-deep">Nothi AI</span>
+                            <span className="text-[10px] font-mono text-ink-muted opacity-0 group-hover:opacity-100 transition-opacity">
+                              {mounted &&
+                                `• ${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                            </span>
+                          </div>
+
+                          {/* Message Body */}
+                          <div className="pl-6.5">
+                            <StreamingTextRenderer
+                              text={msg.content}
+                              isStreaming={false}
+                            />
+
+                            {/* "Based on" Verified Citation Chips */}
+                            {msg.citations && msg.citations.length > 0 && (
+                              <div className="mt-4 pt-3 border-t border-border flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-sans text-ink-muted">Based on:</span>
+                                {msg.citations.map((c, cIdx) => (
+                                  <CitationPopover
+                                    key={cIdx}
+                                    citation={c}
+                                    index={cIdx}
+                                    onInspect={(sec) => setActiveCitationSection(sec)}
+                                  />
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Assistant Actions Row (Copy, Regenerate, Thumbs) */}
+                            <div className="mt-3 flex items-center gap-4 text-xs font-sans text-ink-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                              <button
+                                type="button"
+                                onClick={() => copyMessage(msg.id, msg.content)}
+                                className="hover:text-green-deep transition-colors cursor-pointer"
+                              >
+                                {copiedMessageId === msg.id ? '✓ Copied' : 'Copy'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+                                  if (lastUser) handleRegenerate(lastUser.content);
+                                }}
+                                className="hover:text-green-deep transition-colors cursor-pointer"
+                              >
+                                Regenerate
+                              </button>
+
+                              <div className="flex items-center gap-1 border-l border-border pl-3">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setFeedbackState((prev) => ({
+                                      ...prev,
+                                      [msg.id]: prev[msg.id] === 'up' ? undefined! : 'up',
+                                    }))
+                                  }
+                                  className={`p-1 hover:text-ink cursor-pointer ${
+                                    feedbackState[msg.id] === 'up' ? 'text-green-deep font-bold' : ''
+                                  }`}
+                                  title="Helpful"
+                                >
+                                  👍
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setFeedbackState((prev) => ({
+                                      ...prev,
+                                      [msg.id]: prev[msg.id] === 'down' ? undefined! : 'down',
+                                    }))
+                                  }
+                                  className={`p-1 hover:text-ink cursor-pointer ${
+                                    feedbackState[msg.id] === 'down' ? 'text-vermillion font-bold' : ''
+                                  }`}
+                                  title="Not helpful"
+                                >
+                                  👎
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* ── THINKING SEQUENCE (REAL STAGES & SKELETON) ── */}
+                {isThinking && (
+                  <div className="w-full space-y-2 mt-4 pl-0 sm:pl-1">
+                    <ThinkingStageIndicator
+                      currentStage={thinkingStage}
+                      isError={isErrorState}
+                    />
+                  </div>
+                )}
+
+                {/* ── ACTIVE FLUID STREAMING TRANSITION ── */}
+                {isStreaming && (
+                  <div className="w-full space-y-2 mt-4 pl-0 sm:pl-1">
+                    <div className="flex items-center gap-2 text-xs font-sans text-ink">
+                      <AnimatedLogo state="thinking" size={18} />
+                      <span className="font-semibold text-green-deep">Nothi AI</span>
+                    </div>
+
+                    <div className="pl-6.5">
+                      <StreamingTextRenderer
+                        text={streamingText}
+                        isStreaming={true}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+
+            {/* Jump to Latest Floating Pill */}
+            {showScrollBottom && (
+              <button
+                type="button"
+                onClick={() => scrollToBottom()}
+                className="fixed bottom-24 right-6 sm:right-12 z-20 px-3 py-1.5 rounded-full bg-paper border border-border text-ink text-xs font-sans shadow-md hover:bg-paper-dark transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <span>↓</span>
+                <span>Jump to latest</span>
               </button>
             )}
 
-            {/* New Chat Shortcut */}
-            <button
-              type="button"
-              onClick={handleNewChat}
-              className="p-1.5 rounded-xs border border-border bg-paper text-ink hover:bg-paper-dark transition-colors cursor-pointer"
-              title="New Chat"
-            >
-              ＋
-            </button>
-          </div>
-        </header>
-
-        {/* ── 3. CHAT CONTENT AREA (MESSAGES OR EMPTY GREETING) ── */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6">
-          {messages.length === 0 ? (
-            /* Gemini-Style Empty State */
-            <div className="max-w-3xl mx-auto h-full flex flex-col justify-center py-8 space-y-8 animate-in fade-in duration-200">
-              <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 text-xs font-mono font-bold text-brass uppercase tracking-wider">
-                  <span>✦ Bangladesh Property Vetting Intelligence</span>
-                </div>
-                <h1 className="font-heading text-4xl sm:text-5xl font-bold text-green-deep tracking-tight">
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-deep via-green-mid to-brass">
-                    {lang === 'bn' ? 'আসসালামু আলাইকুম, বিজ্ঞ আইনজীবী' : 'Hello, Counselor'}
-                  </span>
-                </h1>
-                <p className="font-sans text-base sm:text-lg text-ink-muted leading-relaxed">
-                  {lang === 'bn'
-                    ? 'দলিল, খতিয়ান বা এনআইডির ছবি/পিডিএফ আপলোড করুন অথবা সংবিধিবদ্ধ আইন সংক্রান্ত যে কোনো প্রশ্ন জিজ্ঞাসা করুন।'
-                    : 'Drop property deed scans, Khatian ledgers, or NID photos. Nothi AI answers with mathematical grounding in 28 statutory sections.'}
-                </p>
-              </div>
-
-              {/* 4 Interactive Gemini Prompt Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                {SUGGESTED_CARDS.map((card, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSendMessage(lang === 'bn' ? card.promptBn : card.promptEn)}
-                    className="group p-4 rounded-2xl bg-paper border border-border hover:border-brass/70 hover:shadow-md transition-all text-left flex flex-col justify-between space-y-3 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl">{card.icon}</span>
-                      <span className="text-[10px] font-mono text-ink-muted group-hover:text-green-deep font-semibold">
-                        {card.rule}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="font-sans text-xs font-bold text-ink group-hover:text-green-deep transition-colors">
-                        {lang === 'bn' ? card.titleBn : card.titleEn}
-                      </div>
-                      <p className="font-sans text-xs text-ink-muted line-clamp-2">
-                        {lang === 'bn' ? card.promptBn : card.promptEn}
-                      </p>
-                    </div>
-
-                    <div className="text-[11px] font-mono text-brass group-hover:translate-x-1 transition-transform">
-                      {lang === 'bn' ? 'প্রশ্ন করুন →' : 'Ask this →'}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            /* Active Message List */
-            <div className="max-w-3xl mx-auto space-y-6">
-              {messages.map((msg) => {
-                const isUser = msg.role === 'user';
-
-                return (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1.5`}
-                  >
-                    {/* Role Label & Timestamp */}
-                    <div className="text-[10px] font-mono text-ink-muted px-1 flex items-center gap-2">
-                      <span>{isUser ? 'Counsel' : 'Nothi AI'}</span>
-                      <span>•</span>
-                      <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-
-                    {/* Message Bubble */}
-                    <div
-                      className={`relative max-w-[90%] sm:max-w-[85%] rounded-2xl p-4 sm:p-5 text-sm font-sans leading-relaxed shadow-xs ${
-                        isUser
-                          ? 'bg-green-deep text-paper rounded-tr-xs'
-                          : 'bg-paper text-ink border border-border rounded-tl-xs shadow-sm'
-                      }`}
+            {/* ── 3. DOCKED BOTTOM INPUT BAR ── */}
+            <div className="pt-4 sticky bottom-0 bg-[#fbf9f5]/95 backdrop-blur-xs pb-4">
+              <div className="rounded-2xl bg-paper border border-border shadow-xs focus-within:border-brass/80 focus-within:shadow-md transition-all p-3 space-y-2">
+                {/* Upload Error Banner */}
+                {attachmentError && (
+                  <div className="px-3 py-1.5 rounded-xs bg-vermillion/10 border border-vermillion/30 text-vermillion text-xs font-sans flex items-center justify-between">
+                    <span>{attachmentError}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAttachmentError(null)}
+                      className="font-bold ml-2"
                     >
-                      {/* Attached Documents in User Messages */}
-                      {msg.attachments && msg.attachments.length > 0 && (
-                        <div className="mb-3 space-y-2">
-                          <div className="text-xs font-mono opacity-80 pb-1 border-b border-white/20">
-                            Attached Document Bundle ({msg.attachments.length}):
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {msg.attachments.map((att) => (
-                              <div
-                                key={att.id}
-                                className="flex items-center gap-2 p-1.5 rounded-lg bg-black/20 border border-white/10"
-                              >
-                                {att.type === 'image' && att.dataUrl ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setLightboxImage(att.dataUrl!)}
-                                    className="cursor-zoom-in group/img relative"
-                                    title="Click to inspect image scan"
-                                  >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                      src={att.dataUrl}
-                                      alt={att.name}
-                                      className="w-12 h-12 object-cover rounded-md border border-white/30"
-                                    />
-                                    <span className="absolute inset-0 bg-black/30 rounded-md opacity-0 group-hover/img:opacity-100 flex items-center justify-center text-[10px] text-white">
-                                      🔍
-                                    </span>
-                                  </button>
-                                ) : (
-                                  <div className="w-10 h-10 rounded-md bg-vermillion/40 text-paper font-mono text-xs flex items-center justify-center font-bold">
-                                    PDF
-                                  </div>
-                                )}
-                                <div className="text-left text-xs">
-                                  <div className="font-semibold truncate max-w-[140px]">{att.name}</div>
-                                  <div className="text-[10px] opacity-75 font-mono">
-                                    {(att.size / 1024).toFixed(1)} KB
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      ✕
+                    </button>
+                  </div>
+                )}
 
-                      {/* Message Content */}
-                      <div className="whitespace-pre-wrap leading-relaxed select-text">
-                        {msg.content || (
-                          <span className="inline-flex items-center gap-1.5 text-ink-muted">
-                            <span className="w-2 h-2 rounded-full bg-brass animate-pulse" />
-                            <span>Examining statutory corpus...</span>
+                {/* Attached Files Tray with Progress */}
+                {attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pb-2 border-b border-border">
+                    {attachments.map((att) => (
+                      <div
+                        key={att.id}
+                        className="flex items-center gap-2 p-1.5 pr-2.5 rounded-xs bg-paper-dark border border-border text-xs font-sans text-ink"
+                      >
+                        {att.type === 'image' && att.dataUrl ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={att.dataUrl}
+                            alt={att.name}
+                            className="w-7 h-7 object-cover rounded-xs"
+                          />
+                        ) : (
+                          <span className="w-7 h-7 rounded-xs bg-vermillion/20 text-vermillion font-mono font-bold text-[9px] flex items-center justify-center">
+                            PDF
                           </span>
                         )}
-                      </div>
-
-                      {/* Interactive Citation Chips (Strictly Verified) */}
-                      {msg.citations && msg.citations.length > 0 && (
-                        <div className="mt-4 pt-3 border-t border-border flex flex-wrap items-center gap-2">
-                          <span className="text-[11px] font-mono text-ink-muted font-bold">
-                            Verified Citations:
-                          </span>
-                          {msg.citations.map((c, cIdx) => (
-                            <button
-                              key={cIdx}
-                              type="button"
-                              onClick={() => inspectCitation(c.id)}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-green-deep/10 text-green-deep border border-green-deep/30 hover:bg-green-deep hover:text-paper transition-all cursor-pointer shadow-2xs"
-                              title="Click to view verbatim statutory text"
-                            >
-                              <span>✓</span>
-                              <span>{c.act} {c.section ? `(${c.section})` : ''}</span>
-                            </button>
-                          ))}
+                        <div className="truncate max-w-[130px]">
+                          <div className="font-semibold truncate">{att.name}</div>
+                          <div className="text-[10px] text-ink-muted font-mono">
+                            {(att.size / 1024).toFixed(1)} KB
+                          </div>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Assistant Action Bar (Copy, Thumbs, Speak) */}
-                    {!isUser && msg.content && (
-                      <div className="flex items-center gap-2 px-1 text-ink-muted text-xs">
                         <button
                           type="button"
-                          onClick={() => copyMessage(msg.id, msg.content)}
-                          className="hover:text-ink transition-colors p-1 rounded-sm"
-                          title="Copy response"
+                          onClick={() => removeAttachment(att.id)}
+                          className="ml-1 text-ink-muted hover:text-vermillion p-1 font-bold"
+                          title="Remove file"
                         >
-                          {copiedMessageId === msg.id ? '✓ Copied' : '📋 Copy'}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setFeedbackState((prev) => ({
-                              ...prev,
-                              [msg.id]: prev[msg.id] === 'up' ? undefined! : 'up',
-                            }))
-                          }
-                          className={`p-1 rounded-sm hover:text-ink transition-colors ${
-                            feedbackState[msg.id] === 'up' ? 'text-green-deep font-bold' : ''
-                          }`}
-                          title="Good response"
-                        >
-                          👍
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setFeedbackState((prev) => ({
-                              ...prev,
-                              [msg.id]: prev[msg.id] === 'down' ? undefined! : 'down',
-                            }))
-                          }
-                          className={`p-1 rounded-sm hover:text-ink transition-colors ${
-                            feedbackState[msg.id] === 'down' ? 'text-vermillion font-bold' : ''
-                          }`}
-                          title="Poor response"
-                        >
-                          👎
+                          ✕
                         </button>
                       </div>
-                    )}
+                    ))}
                   </div>
-                );
-              })}
+                )}
 
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
+                {/* Auto-growing Textarea (1 to 6 lines) */}
+                <textarea
+                  ref={textareaRef}
+                  value={inputText}
+                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+                    setInputText(e.target.value);
+                    adjustTextarea();
+                  }}
+                  onKeyDown={handleKeyDown}
+                  placeholder={
+                    lang === 'bn'
+                      ? 'দলিল বা সংবিধিবদ্ধ আইন সম্পর্কিত প্রশ্ন লিখুন...'
+                      : 'Ask about a Bangladeshi property document...'
+                  }
+                  rows={1}
+                  maxLength={1000}
+                  className="w-full bg-transparent resize-none outline-hidden font-sans text-sm text-ink placeholder:text-ink-muted/70 leading-relaxed max-h-40"
+                />
 
-        {/* ── 4. GEMINI-STYLE RICH FLOATING INPUT BAR ── */}
-        <div className="p-4 sm:p-6 bg-gradient-to-t from-[#f7f4ed] via-[#f7f4ed] to-transparent shrink-0">
-          <div className="max-w-3xl mx-auto space-y-2">
-            {/* Input Box Card */}
-            <div className="relative rounded-3xl bg-paper border-2 border-border shadow-lg p-3 sm:p-4 focus-within:border-green-deep/70 focus-within:shadow-xl transition-all">
-              {/* Attachment Previews Tray */}
-              {attachments.length > 0 && (
-                <div className="flex flex-wrap gap-2 pb-3 mb-2 border-b border-border">
-                  {attachments.map((att) => (
-                    <div
-                      key={att.id}
-                      className="flex items-center gap-2 p-1.5 pr-2.5 rounded-lg bg-paper-dark border border-border text-xs font-sans text-ink"
-                    >
-                      {att.type === 'image' && att.dataUrl ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={att.dataUrl}
-                          alt={att.name}
-                          className="w-8 h-8 object-cover rounded-md"
-                        />
-                      ) : (
-                        <span className="w-8 h-8 rounded-md bg-vermillion/20 text-vermillion font-mono font-bold text-[10px] flex items-center justify-center">
-                          PDF
-                        </span>
-                      )}
-                      <div className="text-left">
-                        <div className="font-semibold truncate max-w-[120px]">{att.name}</div>
-                        <div className="text-[10px] text-ink-muted font-mono">
-                          {(att.size / 1024).toFixed(1)} KB
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeAttachment(att.id)}
-                        className="ml-1 text-ink-muted hover:text-vermillion p-1 font-bold"
-                        title="Remove attachment"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                {/* Controls: Paperclip, Voice Input, Character Counter, Send/Stop */}
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-1">
+                    {/* Hidden File Picker (PDF, JPG, PNG up to 15MB) */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/jpeg,image/png,application/pdf"
+                      onChange={(e) => handleFiles(e.target.files)}
+                      className="hidden"
+                    />
 
-              {/* Textarea */}
-              <textarea
-                ref={textareaRef}
-                value={inputText}
-                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-                  setInputText(e.target.value);
-                  adjustTextarea();
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder={
-                  lang === 'bn'
-                    ? 'দলিল বা খতিয়ান সংক্রান্ত প্রশ্ন লিখুন, অথবা ছবি ও পিডিএফ ড্রপ করুন...'
-                    : 'Ask about property law, deed timelines, or upload deed scans & PDFs...'
-                }
-                rows={1}
-                className="w-full bg-transparent resize-none outline-hidden font-sans text-sm text-ink placeholder:text-ink-muted/70 leading-relaxed max-h-44"
-              />
-
-              {/* Input Action Controls (Upload, Mic, Send) */}
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex items-center gap-1">
-                  {/* Hidden file input */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*,.pdf"
-                    onChange={(e) => handleFiles(e.target.files)}
-                    className="hidden"
-                  />
-
-                  {/* Attachment Button */}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-2 rounded-full text-ink-muted hover:text-green-deep hover:bg-paper-dark transition-colors cursor-pointer"
-                    title="Upload picture or PDF document"
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
-                    </svg>
-                  </button>
-
-                  {/* Microphone / Speech Dictation */}
-                  <button
-                    type="button"
-                    onClick={toggleVoiceRecording}
-                    className={`p-2 rounded-full transition-colors cursor-pointer ${
-                      isRecording
-                        ? 'bg-vermillion text-paper animate-pulse'
-                        : 'text-ink-muted hover:text-green-deep hover:bg-paper-dark'
-                    }`}
-                    title="Voice dictation"
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-                      <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Right controls: Stop or Send */}
-                <div className="flex items-center gap-2">
-                  {isStreaming ? (
+                    {/* Paperclip Button */}
                     <button
                       type="button"
-                      onClick={stopStreaming}
-                      className="px-3 py-1.5 rounded-full bg-vermillion text-paper font-sans text-xs font-semibold hover:bg-vermillion-light transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
-                    >
-                      <span>■</span>
-                      <span>Stop</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleSendMessage()}
-                      disabled={!inputText.trim() && attachments.length === 0}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                        inputText.trim() || attachments.length > 0
-                          ? 'bg-green-deep text-paper shadow-md hover:bg-green-mid active:scale-95'
-                          : 'bg-paper-dark text-ink-muted/40 cursor-not-allowed'
-                      }`}
-                      title="Send message"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-1.5 rounded-xs text-ink-muted hover:text-green-deep hover:bg-paper-dark transition-colors cursor-pointer"
+                      title="Attach deed scan or PDF"
+                      aria-label="Attach file"
                     >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="22" y1="2" x2="11" y2="13" />
-                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
                       </svg>
                     </button>
-                  )}
+
+                    {/* Voice Input Button */}
+                    <VoiceInputButton
+                      lang={lang}
+                      onTranscript={(transcript) =>
+                        setInputText((prev) => (prev ? prev + ' ' : '') + transcript)
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {/* Character Counter (appears only when near 1000 limit) */}
+                    {inputText.length > 800 && (
+                      <span className="font-mono text-[11px] text-ink-muted">
+                        {inputText.length}/1000
+                      </span>
+                    )}
+
+                    {/* Send or Stop Button */}
+                    {isStreaming || isThinking ? (
+                      <button
+                        type="button"
+                        onClick={handleStop}
+                        className="px-3 py-1.5 rounded-xs bg-vermillion text-paper font-sans text-xs font-semibold hover:bg-vermillion/90 transition-all cursor-pointer flex items-center gap-1 shadow-xs"
+                      >
+                        <span>■</span>
+                        <span>Stop</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSendMessage()}
+                        disabled={!inputText.trim() && attachments.length === 0}
+                        className={`px-3.5 py-1.5 rounded-xs text-xs font-sans font-semibold transition-all cursor-pointer ${
+                          inputText.trim() || attachments.length > 0
+                            ? 'bg-green-deep text-paper hover:bg-green-mid shadow-xs active:scale-95'
+                            : 'bg-paper-dark text-ink-muted/50 cursor-not-allowed'
+                        }`}
+                      >
+                        Send
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Bottom Disclaimer */}
-            <p className="text-center text-[11px] font-sans text-ink-muted">
-              Nothi AI is grounded in 28 verified sections of Bangladesh property law. Verify statutory citations before filing.
-            </p>
+              {/* Fixed Legal Note */}
+              <p className="text-center text-[11px] font-sans text-ink-muted pt-2">
+                Nothi AI explains verified statutory sections. It does not replace a licensed advocate.
+              </p>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
+
+      {/* ── 4. CORPUS 28-SECTION LIST MODAL ── */}
+      <CorpusListModal
+        isOpen={corpusListOpen}
+        onClose={() => setCorpusListOpen(false)}
+        onSelectSection={(sec) => {
+          setCorpusListOpen(false);
+          setActiveCitationSection(sec);
+        }}
+      />
 
       {/* ── 5. STATUTORY VERBATIM INSPECTION MODAL ── */}
       {activeCitationSection && (
@@ -971,7 +1159,7 @@ export default function ChatPage() {
       {/* ── 6. IMAGE LIGHTBOX MODAL ── */}
       {lightboxImage && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out"
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 cursor-zoom-out"
           onClick={() => setLightboxImage(null)}
         >
           <div className="relative max-w-4xl max-h-[90vh]">
@@ -979,12 +1167,12 @@ export default function ChatPage() {
             <img
               src={lightboxImage}
               alt="Enlarged document preview"
-              className="rounded-lg shadow-2xl object-contain max-h-[85vh] mx-auto border-2 border-white/20"
+              className="rounded-md shadow-2xl object-contain max-h-[85vh] mx-auto border border-white/20"
             />
             <button
               type="button"
               onClick={() => setLightboxImage(null)}
-              className="absolute top-2 right-2 px-3 py-1.5 rounded-full bg-black/70 text-white font-mono text-xs hover:bg-black cursor-pointer"
+              className="absolute top-3 right-3 px-3 py-1 rounded-xs bg-black/70 text-white font-mono text-xs hover:bg-black cursor-pointer"
             >
               ✕ Close
             </button>

@@ -140,6 +140,11 @@ export function Header() {
     { id: 'chat', labelEn: 'AI Assistant', labelBn: 'এআই সহকারী', href: '/chat' },
   ];
 
+  // If on dedicated /chat page, Header is suppressed in favor of the chat page's single authoritative header
+  if (pathname === '/chat') {
+    return null;
+  }
+
   return (
     <>
       {/* ── ACCESSIBILITY: SKIP TO MAIN CONTENT LINK ── */}
