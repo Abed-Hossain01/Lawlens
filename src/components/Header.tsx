@@ -198,8 +198,8 @@ export function Header() {
             })}
           </nav>
 
-          {/* ── RIGHT CONTROLS: LANGUAGE SWITCH & "EXPLORE NOTHI AI →" ── */}
-          <div className="flex items-center gap-3 sm:gap-3.5">
+          {/* ── RIGHT CONTROLS: LANGUAGE SWITCH, SIGN IN & DIRECT CHAT CTA ── */}
+          <div className="flex items-center gap-2.5 sm:gap-3">
 
             {/* Compact Two-Segment Language Switch "EN | বাং" */}
             <div
@@ -236,9 +236,9 @@ export function Header() {
               </button>
             </div>
 
-            {/* Sign in / Sign out Options (Right side) */}
+            {/* Registration & Sign In / User Profile Options */}
             {user ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => setSignInModalOpen(true)}
@@ -246,7 +246,7 @@ export function Header() {
                   title={`Signed in as ${user.name}`}
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                  <span className="max-w-[110px] truncate">{user.name.replace('Advocate ', 'Adv. ')}</span>
+                  <span className="max-w-[100px] truncate">{user.name.replace('Advocate ', 'Adv. ')}</span>
                 </button>
                 <button
                   type="button"
@@ -254,23 +254,37 @@ export function Header() {
                   className="text-xs font-sans font-medium text-ink-muted hover:text-vermillion px-2 py-1 rounded-full hover:bg-paper-dark transition-colors cursor-pointer"
                   title="Sign out of your account"
                 >
-                  {lang === 'bn' ? 'লগআউট' : 'Sign out'}
+                  {lang === 'bn' ? 'সাইন আউট' : 'Sign out'}
                 </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => setSignInModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-border bg-paper hover:bg-paper-dark text-ink font-sans text-xs font-semibold transition-all shadow-2xs hover:border-brass/70 cursor-pointer"
-                title="Sign in to your account"
+                className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full border border-border bg-paper hover:bg-paper-dark text-ink font-sans text-xs font-semibold transition-all shadow-2xs hover:border-brass/70 cursor-pointer"
+                title="Register or Sign in"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
-                <span>{lang === 'bn' ? 'লগইন' : 'Sign in'}</span>
+                <span className="hidden sm:inline">{lang === 'bn' ? 'নিবন্ধন / সাইন ইন' : 'Sign In'}</span>
+                <span className="sm:hidden">{lang === 'bn' ? 'সাইন ইন' : 'Sign In'}</span>
               </button>
             )}
+
+            {/* Direct Chat Button (Visible across all landing page views) */}
+            <Link
+              href="/chat"
+              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-full bg-green-deep hover:bg-green-mid text-paper font-sans text-xs font-semibold shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer"
+              title="Open Nothi AI Chat"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <span>{lang === 'bn' ? 'চ্যাট' : 'Chat'}</span>
+              <span className="text-brass">→</span>
+            </Link>
 
             {/* Mobile Hamburger Menu Button (<768px) */}
             <button
@@ -323,6 +337,21 @@ export function Header() {
                     </Link>
                   );
                 })}
+
+                {/* Direct Chat Link in Mobile Navigation */}
+                <Link
+                  href="/chat"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-lg font-heading font-semibold text-green-deep py-2 flex items-center justify-between border-b border-border/40"
+                >
+                  <span className="flex items-center gap-2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    <span>{lang === 'bn' ? 'নথি এআই চ্যাট' : 'Chat with Nothi AI'}</span>
+                  </span>
+                  <span className="text-xs font-mono font-bold text-brass">Go →</span>
+                </Link>
               </nav>
             </div>
 

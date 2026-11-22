@@ -29,20 +29,25 @@ export function FinalCtaSection() {
         </p>
 
         <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
+          <Link
+            href="/chat"
+            className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-brass text-desk-dark hover:bg-brass-light font-sans text-sm font-bold transition-all shadow-lg hover:shadow-brass/25 active:scale-95 cursor-pointer"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>{lang === 'bn' ? 'নথি এআই চ্যাটে যান' : 'Chat with Nothi AI'}</span>
+            <span className="text-base leading-none">→</span>
+          </Link>
+
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="px-8 py-3.5 rounded-xs bg-green-deep hover:bg-green-mid text-paper font-sans text-sm font-semibold transition-all shadow-md active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full border-2 border-border bg-paper hover:bg-paper-light text-ink font-sans text-sm font-semibold transition-all shadow-2xs hover:border-brass/70 active:scale-95 cursor-pointer"
           >
-            Request a Demo &rarr;
+            <span>Request a Demo</span>
+            <span>&rarr;</span>
           </button>
-
-          <Link
-            href="/chat"
-            className="px-6 py-3.5 rounded-xs border-2 border-border bg-paper hover:bg-paper-light text-ink font-sans text-sm font-semibold transition-colors shadow-2xs"
-          >
-            {lang === 'bn' ? 'নথি এআই অন্বেষণ করুন →' : 'Explore Nothi AI →'}
-          </Link>
         </div>
       </div>
 

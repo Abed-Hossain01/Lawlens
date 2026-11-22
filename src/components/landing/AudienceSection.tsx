@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useLang } from '@/lib/lang';
 
 export function AudienceSection() {
@@ -95,6 +96,30 @@ export function AudienceSection() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* ── Direct Chat Entry Bridge ── */}
+        <div className="mt-14 pt-8 border-t border-border/60 flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <h4 className="font-heading text-lg font-bold text-green-deep">
+              {lang === 'bn' ? 'আপনার দলিলের সংবিধিবদ্ধ অনুচ্ছেদ পরীক্ষা করুন' : 'Have a deed, Khatian or NID question?'}
+            </h4>
+            <p className="text-xs text-ink-muted font-sans">
+              {lang === 'bn'
+                ? '২৮টি সংবিধিবদ্ধ ধারার ভিত্তিতে তাৎক্ষণিক উত্তর পান।'
+                : 'Answers grounded strictly in 28 verified sections of Bangladeshi property law.'}
+            </p>
+          </div>
+          <Link
+            href="/chat"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-green-deep hover:bg-green-mid text-paper font-sans text-xs sm:text-sm font-semibold shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>{lang === 'bn' ? 'নথি এআই চ্যাটে জিজ্ঞাসা করুন' : 'Ask in Nothi AI Chat'}</span>
+            <span className="text-brass">→</span>
+          </Link>
         </div>
       </div>
     </section>

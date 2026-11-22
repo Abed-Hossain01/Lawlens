@@ -1,37 +1,38 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useChat } from '@/context/ChatContext';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export function ChatFloatingLauncher() {
-  const { isOpen, setIsOpen } = useChat();
+  const pathname = usePathname();
   const [pulse, setPulse] = useState(false);
   const [hasHovered, setHasHovered] = useState(false);
 
-  // Gentle one-time attention pulse after 6 seconds, then never again
+  // Gentle one-time attention pulse after 4 seconds
   useEffect(() => {
     const timer = setTimeout(() => {
       setPulse(true);
       const stopTimer = setTimeout(() => setPulse(false), 2400);
       return () => clearTimeout(stopTimer);
-    }, 6000);
+    }, 4000);
 
     return () => clearTimeout(timer);
   }, []);
 
-  if (isOpen) return null;
+  // Suppress floating button when already on the dedicated /chat page
+  if (pathname === '/chat') return null;
 
   return (
-    <div className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40">
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
+    <div className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40 select-none">
+      <Link
+        href="/chat"
         onMouseEnter={() => setHasHovered(true)}
         onMouseLeave={() => setHasHovered(false)}
         aria-label="Open Nothi AI Legal Assistant Chat"
-        className={`group flex items-center h-14 rounded-full bg-green-deep hover:bg-green-mid text-paper shadow-2xl border-2 border-brass/50 transition-all duration-300 active:scale-95 cursor-pointer focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden ${
+        className={`group flex items-center h-14 rounded-full bg-green-deep hover:bg-green-mid text-paper shadow-2xl border-2 border-brass/60 transition-all duration-300 active:scale-95 cursor-pointer focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden ${
           pulse ? 'animate-bounce shadow-[0_0_24px_rgba(176,141,87,0.5)]' : ''
-        } ${hasHovered ? 'px-4' : 'w-14 justify-center'}`}
+        } ${hasHovered ? 'px-5' : 'w-14 justify-center'}`}
       >
         {/* Chat Icon */}
         <div className="w-6 h-6 flex items-center justify-center shrink-0">
@@ -42,15 +43,15 @@ export function ChatFloatingLauncher() {
           </svg>
         </div>
 
-        {/* Expandable Label on Hover (Hidden on mobile) */}
+        {/* Expandable Label on Hover */}
         <span
-          className={`hidden sm:inline font-sans text-xs font-semibold tracking-wide whitespace-nowrap overflow-hidden transition-all duration-300 ${
+          className={`font-sans text-xs font-semibold tracking-wide whitespace-nowrap overflow-hidden transition-all duration-300 ${
             hasHovered ? 'max-w-xs pl-2.5 opacity-100' : 'max-w-0 opacity-0'
           }`}
         >
-          Ask Nothi AI
+          Chat with Nothi AI →
         </span>
-      </button>
+      </Link>
     </div>
   );
 }

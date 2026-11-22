@@ -25,7 +25,6 @@ export function SignInModal({ isOpen, onClose, defaultTab = 'register' }: SignIn
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
   // Close on Escape key
   useEffect(() => {

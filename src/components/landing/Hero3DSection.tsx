@@ -263,29 +263,40 @@ export function Hero3DSection() {
                 </p>
               </div>
 
-              {/* Interactive Controls Bar */}
-              <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              {/* Interactive Controls Bar: Rearranged matching pill buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                {/* Primary Chat CTA Button */}
+                <Link
+                  href="/chat"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brass text-desk-dark hover:bg-brass-light font-sans text-xs sm:text-sm font-bold tracking-wide transition-all shadow-lg hover:shadow-brass/25 active:scale-95 cursor-pointer"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span>{lang === 'bn' ? 'নথি এআই চ্যাটে যান' : 'Chat with Nothi AI'}</span>
+                  <span className="text-base leading-none">→</span>
+                </Link>
+
+                {/* Secondary Explore Plans Link */}
+                <Link
+                  href="#pricing"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-paper/30 hover:border-paper bg-desk-mid/70 hover:bg-desk-mid text-paper font-sans text-xs sm:text-sm font-semibold transition-all shadow-md hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+                >
+                  <span>{lang === 'bn' ? 'প্ল্যান দেখুন' : 'Explore Plans'}</span>
+                </Link>
+
                 {/* Sound FX Toggle */}
                 <button
                   type="button"
                   onClick={() => setSoundEnabled(!soundEnabled)}
-                  className={`px-2.5 py-1 rounded-xs border text-[11px] font-mono transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${soundEnabled
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border font-sans text-xs transition-all shadow-sm cursor-pointer ${soundEnabled
                     ? 'border-brass bg-brass/20 text-brass-light'
-                    : 'border-desk-light/40 bg-desk-mid/70 text-paper-dark hover:text-paper'
+                    : 'border-border/40 hover:border-brass/60 bg-desk-mid/70 text-paper-dark hover:text-paper'
                     }`}
                   title={soundEnabled ? 'Mute Registry Sound FX' : 'Enable Registry Sound FX (Stamp thud & scan)'}
                 >
                   <span>{soundEnabled ? '🔊 Sound On' : '🔇 Sound Off'}</span>
                 </button>
-
-                {/* Direct Explore / Chat CTA */}
-                <Link
-                  href="/chat"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-xs bg-brass text-desk-dark hover:bg-brass-light font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer ml-auto sm:ml-0"
-                >
-                  <span>{lang === 'bn' ? 'অনুসন্ধান করুন' : 'Explore Assistant'}</span>
-                  <span>→</span>
-                </Link>
               </div>
             </div>
 
