@@ -18,6 +18,7 @@ const ID_ALIASES: Record<string, string> = {
   'tp_1882_sec54': 'tpa_1882_s54',
   'tp_1882_sec55': 'tpa_1882_s55',
   'nid_rules_r3': 'nidw_rules_r3',
+  'nidw_rules_rule3': 'nidw_rules_r3',
 };
 
 /**

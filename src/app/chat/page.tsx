@@ -41,58 +41,110 @@ function nowTimestamp(): number {
   return Date.now();
 }
 
-const STORAGE_SESSIONS_KEY = 'nothi_ai_sessions_v3';
+const STORAGE_SESSIONS_KEY = 'nothi_ai_sessions_v4';
 const ACTIVE_SESSION_ID_KEY = 'nothi_ai_active_session_id';
 
 const emptySubscribe = () => () => {};
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
 
+// 4 Plain Text Suggestions for Clerk's Reading Room Empty State
 const EMPTY_SUGGESTIONS = [
   {
-    tag: 'Registration Act 1908 (Sec. 23)',
-    icon: '📜',
-    titleEn: '4-Month Registration Window',
-    titleBn: 'রেজিস্ট্রেশনের ৪ মাসের সময়সীমা',
     textEn: 'How long can pass between signing and registering a Saf Kabala deed?',
     textBn: 'সাফ কবলা দলিল সম্পাদনের পর কতদিনের মধ্যে তা রেজিস্ট্রি করতে হবে?',
   },
   {
-    tag: 'NID Rules 2010 (Rule 3)',
-    icon: '🪪',
-    titleEn: 'National ID Smart Card',
-    titleBn: 'স্মার্ট এনআইডি কার্ডের বৈধতা',
-    textEn: 'What makes an NID number valid under Rule 3?',
-    textBn: 'এনআইডি বিধিমালা ২০১০ এর বিধি ৩ অনুসারে কোন পরিচয়পত্র বৈধ?',
+    textEn: 'What makes an NID number valid?',
+    textBn: 'জাতীয় পরিচয়পত্র (এনআইডি) নম্বর কী কারণে সংবিধিবদ্ধভাবে বৈধ হয়?',
   },
   {
-    tag: 'Transfer of Property Act (Sec. 52)',
-    icon: '⚖️',
-    titleEn: 'Lis Pendens & Dag Matching',
-    titleBn: 'মামলাধীন স্বত্ব ও দাগ গরমিল',
-    textEn: 'What does a Dag number mismatch between deed and khatian mean?',
+    textEn: 'What does a Dag number mismatch mean?',
     textBn: 'দলিল ও খতিয়ানের দাগ নম্বরের গরমিলের আইনি ফলাফল কী?',
   },
   {
-    tag: 'SAT Act 1950 (Chain of Title)',
-    icon: '📑',
-    titleEn: 'Khatian Record of Rights',
-    titleBn: 'খতিয়ানের স্বত্বলিপি ও নামজারি',
-    textEn: 'What is a Khatian used for in property conveyance?',
+    textEn: 'What is a Khatian used for?',
     textBn: 'সম্পত্তি হস্তান্তরে খতিয়ান (স্বত্বলিপির) মূল ভূমিকা কী?',
   },
 ];
 
+// Contextual follow-up chips (max 2 per assistant answer)
+function getFollowUpChips(content: string, lang: 'en' | 'bn'): string[] {
+  const lower = content.toLowerCase();
+  if (lower.includes('23') || lower.includes('four month') || lower.includes('৪ মাস') || lower.includes('presentation')) {
+    return lang === 'bn'
+      ? ['ধারা ২৪ এর অধীনে বিলম্ব কি মওকুফযোগ্য?', 'দেরিতে দলিলের জন্য শাস্তি কী?']
+      : ['Can Section 24 extend this deadline?', 'What are the penalties for late presentation?'];
+  }
+  if (lower.includes('nid') || lower.includes('স্মার্ট') || lower.includes('পরিচয়পত্র') || lower.includes('rule 3')) {
+    return lang === 'bn'
+      ? ['৯-সংখ্যার এনআইডি কি বৈধ?', 'বিধি ৫ কীভাবে নাম যাচাই করে?']
+      : ['Can a 9-digit NID be verified?', 'How does Rule 5 check party names?'];
+  }
+  if (lower.includes('dag') || lower.includes('দাগ') || lower.includes('mismatch')) {
+    return lang === 'bn'
+      ? ['দাগ নম্বরের গরমিল কীভাবে সংশোধন করা যায়?', 'আরএস ও বিএস খতিয়ানের পার্থক্য কী?']
+      : ['How to rectify a Dag mismatch?', 'What is the difference between RS and BS Khatians?'];
+  }
+  if (lower.includes('khatian') || lower.includes('খতিয়ান')) {
+    return lang === 'bn'
+      ? ['নামজারি খতিয়ান কীভাবে যাচাই হয়?', 'দলিলের আগে খতিয়ান কেন বাধ্যতামূলক?']
+      : ['How is a Mutation Khatian verified?', 'Why is Khatian compulsory before deed registration?'];
+  }
+  return lang === 'bn'
+    ? ['কোন দলিলগুলো বাধ্যতামূলকভাবে রেজিস্ট্রি করতে হয়?', 'লিস পেনডেন্স নীতি কীভাবে প্রযোজ্য?']
+    : ['What documents are compulsorily registered?', 'How does Lis Pendens affect title?'];
+}
+
 export default function ChatPage() {
   const { lang, setLang } = useLang();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [signInModalOpen, setSignInModalOpen] = useState(false);
 
-  // Sessions & Active Chat State
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<string>('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Sessions & Active Chat State (clean state initialization without effect-cascading)
+  const [sessions, setSessions] = useState<ChatSession[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem(STORAGE_SESSIONS_KEY);
+      if (stored) {
+        const parsed: ChatSession[] = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [
+      {
+        id: 'session_init',
+        title: 'Property Examination',
+        createdAt: 0,
+        messages: [],
+      },
+    ];
+  });
+
+  const [activeSessionId, setActiveSessionId] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'session_init';
+    try {
+      const savedActiveId = localStorage.getItem(ACTIVE_SESSION_ID_KEY);
+      if (savedActiveId) return savedActiveId;
+      const stored = localStorage.getItem(STORAGE_SESSIONS_KEY);
+      if (stored) {
+        const parsed: ChatSession[] = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed[0].id;
+      }
+    } catch {}
+    return 'session_init';
+  });
+  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const mounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
+
+  const toggleSidebar = () => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setIsDesktopSidebarCollapsed((prev) => !prev);
+    } else {
+      setIsMobileDrawerOpen((prev) => !prev);
+    }
+  };
 
   // Input & Attachment States
   const [inputText, setInputText] = useState('');
@@ -118,150 +170,106 @@ export default function ChatPage() {
   const [feedbackState, setFeedbackState] = useState<Record<string, 'up' | 'down'>>({});
   const [showScrollBottom, setShowScrollBottom] = useState(false);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatScrollContainerRef = useRef<HTMLDivElement>(null);
+  // DOM Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatScrollContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<boolean>(false);
 
-  // ── 1. INITIALIZE SESSIONS FROM LOCALSTORAGE ──────────────────
-  useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const stored = localStorage.getItem(STORAGE_SESSIONS_KEY);
-        let parsedSessions: ChatSession[] = [];
-        if (stored) {
-          try {
-            parsedSessions = JSON.parse(stored);
-          } catch {
-            parsedSessions = [];
-          }
-        }
 
-        // Prune empty duplicate sessions from storage so the sidebar stays clean
-        const withMessages = (parsedSessions || []).filter((s) => s.messages && s.messages.length > 0);
-        if (withMessages.length > 0) {
-          parsedSessions = withMessages;
-        } else {
-          const initialSession: ChatSession = {
-            id: makeId('session'),
-            title: lang === 'bn' ? 'দলিল পরীক্ষণ' : 'Property Record Check',
-            createdAt: nowTimestamp(),
-            messages: [],
-          };
-          parsedSessions = [initialSession];
-        }
-        localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(parsedSessions));
 
-        setSessions(parsedSessions);
-
-        const savedActiveId = localStorage.getItem(ACTIVE_SESSION_ID_KEY);
-        if (savedActiveId && parsedSessions.some((s) => s.id === savedActiveId)) {
-          setActiveSessionId(savedActiveId);
-        } else {
-          setActiveSessionId(parsedSessions[0].id);
-        }
-      } catch (err) {
-        console.warn('Could not load chat sessions:', err);
-      }
-    });
-  }, [lang]);
-
-  // Persist sessions helper
   const persistSessions = useCallback(
-    (updated: ChatSession[], newActiveId?: string) => {
-      setSessions(updated);
+    (newSessions: ChatSession[]) => {
+      setSessions(newSessions);
       try {
-        localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(updated));
-        if (newActiveId) {
-          localStorage.setItem(ACTIVE_SESSION_ID_KEY, newActiveId);
-        }
-      } catch (err) {
-        console.warn('Could not persist sessions:', err);
+        localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(newSessions));
+      } catch (e) {
+        console.warn('Unable to persist chat sessions to localStorage:', e);
       }
     },
     []
   );
 
-  const activeSession = useMemo(
-    () => sessions.find((s) => s.id === activeSessionId) || sessions[0],
-    [sessions, activeSessionId]
-  );
-  const messages = useMemo(() => activeSession?.messages || [], [activeSession]);
+  const activeSession = useMemo(() => {
+    return sessions.find((s) => s.id === activeSessionId) || sessions[0] || {
+      id: 'default',
+      title: 'Property Examination',
+      createdAt: 0,
+      messages: [],
+    };
+  }, [sessions, activeSessionId]);
 
-  // Track scroll position for "Jump to latest"
+  const messages = activeSession.messages;
+
+  // ── 2. AUTO-SCROLL TO BOTTOM ──────────────────────────────────
+  const scrollToBottom = useCallback((smooth = true) => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: smooth ? 'smooth' : 'auto',
+      block: 'end',
+    });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom(false);
+  }, [activeSessionId, scrollToBottom]);
+
+  useEffect(() => {
+    if (isStreaming || isThinking) {
+      scrollToBottom(false);
+    }
+  }, [streamingText, isThinking, isStreaming, scrollToBottom]);
+
   const handleScroll = () => {
     if (!chatScrollContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = chatScrollContainerRef.current;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 120;
-    setShowScrollBottom(!isNearBottom);
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+    setShowScrollBottom(distanceToBottom > 240);
   };
 
-  const scrollToBottom = (smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
-  };
-
-  useEffect(() => {
-    if (!showScrollBottom) {
-      scrollToBottom();
-    }
-  }, [messages, isThinking, isStreaming, showScrollBottom]);
-
-  // Adjust textarea height dynamically
+  // Auto-grow textarea (1 to 6 lines)
   const adjustTextarea = () => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
-    }
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    const newHeight = Math.min(el.scrollHeight, 160);
+    el.style.height = `${newHeight}px`;
   };
 
-  // ── 2. NEW CHAT & SESSION MANAGEMENT ──────────────────────────
+  // ── 3. SESSION MANAGEMENT ─────────────────────────────────────
   const handleNewChat = () => {
-    // If active session is already empty (no messages yet), just refocus
-    if (activeSession && activeSession.messages.length === 0) {
-      setInputText('');
-      setAttachments([]);
-      setAttachmentError(null);
-      setIsThinking(false);
-      setIsStreaming(false);
-      setStreamingText('');
-      setLogoState('idle');
-      if (window.innerWidth < 768) setSidebarOpen(false);
-      textareaRef.current?.focus();
-      return;
-    }
-
-    // Prune existing sessions that are empty to avoid clutter
-    const nonEmptySessions = sessions.filter((s) => s.messages.length > 0);
-
     const newSession: ChatSession = {
       id: makeId('session'),
-      title: lang === 'bn' ? 'নতুন দলিল পরীক্ষণ' : 'New Property Examination',
+      title: 'New Examination',
       createdAt: nowTimestamp(),
       messages: [],
     };
-    const updated = [newSession, ...nonEmptySessions];
-    persistSessions(updated, newSession.id);
+    const updated = [newSession, ...sessions];
+    persistSessions(updated);
     setActiveSessionId(newSession.id);
+    try {
+      localStorage.setItem(ACTIVE_SESSION_ID_KEY, newSession.id);
+    } catch {}
     setInputText('');
     setAttachments([]);
     setAttachmentError(null);
-    setIsThinking(false);
-    setIsStreaming(false);
     setStreamingText('');
+    setIsStreaming(false);
+    setIsThinking(false);
     setLogoState('idle');
-    if (window.innerWidth < 768) setSidebarOpen(false);
-    textareaRef.current?.focus();
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setIsMobileDrawerOpen(false);
+    }
   };
 
   const handleSelectSession = (id: string) => {
     setActiveSessionId(id);
-    localStorage.setItem(ACTIVE_SESSION_ID_KEY, id);
-    setIsThinking(false);
-    setIsStreaming(false);
-    setStreamingText('');
-    setLogoState('idle');
-    if (window.innerWidth < 768) setSidebarOpen(false);
+    try {
+      localStorage.setItem(ACTIVE_SESSION_ID_KEY, id);
+    } catch {}
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setIsMobileDrawerOpen(false);
+    }
   };
 
   const handleRenameSession = (id: string, newTitle: string) => {
@@ -270,17 +278,17 @@ export default function ChatPage() {
   };
 
   const handleDeleteSession = (id: string) => {
-    const remaining = sessions.filter((s) => s.id !== id);
-    if (remaining.length === 0) {
+    if (sessions.length <= 1) {
       handleNewChat();
       return;
     }
-    const nextActive = activeSessionId === id ? remaining[0].id : activeSessionId;
-    persistSessions(remaining, nextActive);
+    const updated = sessions.filter((s) => s.id !== id);
+    persistSessions(updated);
+    const nextActive = updated[0].id;
     setActiveSessionId(nextActive);
   };
 
-  // ── 3. DATE GROUPING FOR CONVERSATION LIST ────────────────────
+  // ── 4. DATE GROUPING FOR CONVERSATION LIST (Today, Yesterday, Earlier) ──
   const groupedSessions = useMemo(() => {
     if (!mounted) {
       return sessions.length > 0 ? [{ label: 'Conversations', items: sessions }] : [];
@@ -290,28 +298,24 @@ export default function ChatPage() {
     today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    const lastWeek = new Date(today);
-    lastWeek.setDate(lastWeek.getDate() - 7);
 
     const groups: { label: string; items: ChatSession[] }[] = [
       { label: 'Today', items: [] },
       { label: 'Yesterday', items: [] },
-      { label: 'Previous 7 days', items: [] },
-      { label: 'Older', items: [] },
+      { label: 'Earlier', items: [] },
     ];
 
     sessions.forEach((s) => {
       const date = new Date(s.createdAt);
       if (date >= today) groups[0].items.push(s);
       else if (date >= yesterday) groups[1].items.push(s);
-      else if (date >= lastWeek) groups[2].items.push(s);
-      else groups[3].items.push(s);
+      else groups[2].items.push(s);
     });
 
     return groups.filter((g) => g.items.length > 0);
   }, [sessions, mounted]);
 
-  // ── 4. FILE ATTACHMENTS (MAX 3, 15MB EACH) ────────────────────
+  // ── 5. FILE ATTACHMENTS (MAX 3, 15MB EACH) ────────────────────
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setAttachmentError(null);
@@ -380,24 +384,30 @@ export default function ChatPage() {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  // Drag and Drop
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
   };
+
   const handleDragLeave = (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
   };
+
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    handleFiles(e.dataTransfer.files);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
   };
 
-  // ── 5. MEANINGFUL AUTO-TITLING ────────────────────────────────
-  const generateMeaningfulTitle = (content: string, firstFileName?: string) => {
-    const lower = content.toLowerCase();
+  // Meaningful auto-titling from question (max 40 chars, never "hi")
+  const generateMeaningfulTitle = (content: string, firstFileName?: string): string => {
+    const lower = content.toLowerCase().trim();
+    if (lower === 'hi' || lower === 'hello' || lower === 'hey') {
+      return 'Property Inquiry';
+    }
     if (lower.includes('23') || lower.includes('signing and registering') || lower.includes('presentation')) {
       return 'Deed Presentation Window (Sec. 23)';
     }
@@ -453,7 +463,7 @@ export default function ChatPage() {
     const isFirst = messages.length === 0;
     const newTitle = isFirst ? generateMeaningfulTitle(content, currentAttachments[0]?.name) : activeSession.title;
 
-    // Immediately append user message with 180ms smooth entrance
+    // Immediately append user message
     const updatedMessagesWithUser = [...messages, userMessage];
     const updatedSessionsWithUser = sessions.map((s) =>
       s.id === activeSessionId
@@ -462,29 +472,28 @@ export default function ChatPage() {
     );
     persistSessions(updatedSessionsWithUser);
 
-    // ── STAGE 1: THINKING SEQUENCE ──────────────────────────────
+    // ── STAGE 1: 4-STAGE THINKING SEQUENCE (>=500ms each) ───────
     setIsThinking(true);
     setLogoState('thinking');
     setIsErrorState(false);
 
-    // Execute real pipeline stages with minimum 500ms duration for readability
     setThinkingStage('reading');
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 520));
     if (abortControllerRef.current) return;
 
     setThinkingStage('searching');
-    await new Promise((r) => setTimeout(r, 550));
+    await new Promise((r) => setTimeout(r, 560));
     if (abortControllerRef.current) return;
 
     setThinkingStage('checking');
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 520));
     if (abortControllerRef.current) return;
 
     setThinkingStage('writing');
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 500));
     if (abortControllerRef.current) return;
 
-    // ── STAGE 2: STREAMING WORD-BY-WORD ─────────────────────────
+    // ── STAGE 2: STREAMING WORD-BY-WORD (40-60 wps) ─────────────
     setIsThinking(false);
     setIsStreaming(true);
     setStreamingText('');
@@ -506,7 +515,7 @@ export default function ChatPage() {
       responseCitations = response.citations;
 
       // Check if out-of-corpus error
-      if (response.citations.length === 0 && response.content.includes("cannot find this topic")) {
+      if (response.citations.length === 0 && response.content.includes('cannot find this topic')) {
         setLogoState('error');
         await new Promise((r) => setTimeout(r, 600));
       } else {
@@ -582,33 +591,35 @@ export default function ChatPage() {
 
   return (
     <div
-      className="flex flex-col h-[100dvh] bg-[#fbf9f5] text-ink overflow-hidden select-none font-sans"
+      className="flex flex-col h-[100dvh] bg-[#F6F1E7] text-ink overflow-hidden select-none font-sans"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* ── DRAG AND DROP FULLSCREEN OVERLAY ── */}
+      {/* ── DRAG AND DROP FULLSCREEN OVERLAY (NO EMOJI) ── */}
       {isDragging && (
-        <div className="fixed inset-0 z-50 bg-green-deep/85 backdrop-blur-xs flex flex-col items-center justify-center text-paper border-4 border-dashed border-brass pointer-events-none animate-in fade-in duration-150">
-          <div className="w-16 h-16 rounded-full bg-paper/10 flex items-center justify-center mb-3 text-3xl">
-            📂
+        <div className="fixed inset-0 z-50 bg-[#1B4332]/90 backdrop-blur-xs flex flex-col items-center justify-center text-paper border-4 border-dashed border-brass pointer-events-none animate-in fade-in duration-150">
+          <div className="w-16 h-16 rounded-full bg-paper/10 flex items-center justify-center mb-3 text-brass">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
           </div>
           <h3 className="font-heading text-2xl font-bold">Drop property documents here</h3>
-          <p className="text-sm font-sans text-paper-dark mt-1">
+          <p className="text-sm font-sans text-paper/80 mt-1">
             Accepts Saf Kabala deed scans, Khatian ledgers, and NID cards (PDF, JPG, PNG up to 15 MB)
           </p>
         </div>
       )}
 
-      {/* ── 1. SINGLE UNIFIED HEADER (TOP BAR) ── */}
-      <header className="h-[60px] md:h-[64px] border-b border-border bg-paper/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-2xs">
-        {/* Left: Sidebar Toggle & Animated Logo Wordmark */}
-        <div className="flex items-center gap-3">
+      {/* ── 1. SINGLE AUTHORITATIVE HEADER (NO SECOND LOGO / TOGGLE) ── */}
+      <header className="h-[60px] md:h-[64px] border-b border-border/80 bg-[#FAF7F2] px-4 sm:px-6 flex items-center justify-between shrink-0 z-30">
+        {/* Left: Sidebar Toggle + Nothi AI Logo & Wordmark */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-xs border border-border text-ink hover:bg-paper-dark transition-colors cursor-pointer"
-            title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+            onClick={toggleSidebar}
+            className="p-1.5 sm:p-2 rounded-xs border border-border/70 text-ink hover:bg-paper-dark transition-colors cursor-pointer"
+            title="Toggle conversation sidebar"
             aria-label="Toggle conversation sidebar"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -616,36 +627,44 @@ export default function ChatPage() {
             </svg>
           </button>
 
-          <Link href="/" className="no-underline flex items-center" aria-label="Nothi AI Home">
-            <AnimatedLogo state={logoState} size={28} showWordmark={true} />
+          <Link href="/" className="no-underline flex items-center gap-2 group" aria-label="Nothi AI Home">
+            <AnimatedLogo state={logoState} size={24} />
+            <span className="font-heading text-lg sm:text-xl font-bold text-green-deep tracking-tight">
+              Nothi AI
+            </span>
+            <span className="hidden sm:inline font-bangla text-base text-ink-muted/80 ml-0.5">
+              নথি এআই
+            </span>
           </Link>
         </div>
 
-        {/* Center/Right Controls: Single Quiet Corpus Text, Language Switch, New Chat, Home Link */}
-        <div className="flex items-center gap-2.5 sm:gap-4">
-          {/* Quiet 28 Verified Sections Link */}
+        {/* Center: Quiet 28 Verified Sections Link (Desktop) */}
+        <div className="hidden md:flex items-center">
           <button
             type="button"
             onClick={() => setCorpusListOpen(true)}
-            className="hidden sm:inline-flex items-center gap-1.5 text-xs font-sans text-ink-muted hover:text-green-deep transition-colors cursor-pointer px-2 py-1 rounded-xs hover:bg-paper-dark"
-            title="View verified statutory sections"
+            className="inline-flex items-center gap-2 text-xs font-sans text-ink-muted hover:text-green-deep transition-colors cursor-pointer px-3 py-1.5 rounded-full hover:bg-paper-dark/60"
+            title="View 28 verified sections from laws_corpus.json"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-green-deep" />
             <span>28 verified sections</span>
           </button>
+        </div>
 
+        {/* Right Controls: Single EN / বাং Switch, Sign In/Profile, Back to site */}
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Single Header EN / বাং Language Toggle */}
           <div
             role="radiogroup"
             aria-label="Select interface language"
-            className="inline-flex p-0.5 rounded-xs border border-border bg-paper-dark"
+            className="inline-flex p-0.5 rounded-full border border-border/80 bg-paper-dark/60"
           >
             <button
               type="button"
               role="radio"
               aria-checked={lang === 'en'}
               onClick={() => setLang('en')}
-              className={`px-2 py-0.5 rounded-xs text-xs font-sans transition-all cursor-pointer ${
+              className={`px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-sans transition-all cursor-pointer ${
                 lang === 'en'
                   ? 'bg-green-deep text-paper font-semibold shadow-2xs'
                   : 'text-ink-muted hover:text-ink'
@@ -658,7 +677,7 @@ export default function ChatPage() {
               role="radio"
               aria-checked={lang === 'bn'}
               onClick={() => setLang('bn')}
-              className={`px-2 py-0.5 rounded-xs text-xs font-bangla transition-all cursor-pointer ${
+              className={`px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-bangla transition-all cursor-pointer ${
                 lang === 'bn'
                   ? 'bg-green-deep text-paper font-semibold shadow-2xs'
                   : 'text-ink-muted hover:text-ink'
@@ -668,60 +687,35 @@ export default function ChatPage() {
             </button>
           </div>
 
-          {/* New Chat Button */}
-          <button
-            type="button"
-            onClick={handleNewChat}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-paper border border-border hover:bg-paper-dark text-xs font-sans font-medium text-ink transition-colors cursor-pointer"
-            title="Start a new chat"
-          >
-            <span>+</span>
-            <span>{lang === 'bn' ? 'নতুন' : 'New chat'}</span>
-          </button>
-
-          {/* Sign In / Sign Out Option (Right Side) */}
+          {/* User Sign In / Profile Pill */}
           {user ? (
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setSignInModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-paper hover:bg-paper-dark text-xs font-sans font-semibold text-ink shadow-2xs hover:border-brass/70 transition-all cursor-pointer"
-                title={`Signed in as ${user.name}`}
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                <span className="max-w-[85px] sm:max-w-[130px] truncate">{user.name.replace('Advocate ', 'Adv. ')}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => signOut()}
-                className="text-xs font-sans font-medium text-ink-muted hover:text-vermillion px-2 py-1 rounded-full hover:bg-paper-dark transition-colors cursor-pointer"
-                title="Sign out"
-              >
-                {lang === 'bn' ? 'লগআউট' : 'Sign out'}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setSignInModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full border border-border/80 bg-paper hover:bg-paper-dark text-xs font-sans text-ink shadow-2xs hover:border-brass/70 transition-all cursor-pointer"
+              title={`Signed in as ${user.name}`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+              <span className="max-w-[70px] sm:max-w-[120px] truncate">{user.name.replace('Advocate ', 'Adv. ')}</span>
+            </button>
           ) : (
             <button
               type="button"
               onClick={() => setSignInModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-green-deep text-paper hover:bg-green-mid text-xs font-sans font-semibold shadow-xs hover:shadow-sm transition-all cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full border border-border/80 bg-paper hover:bg-paper-dark text-xs font-sans text-ink hover:text-green-deep transition-all cursor-pointer shadow-2xs"
               title="Sign in with your email"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
               <span>{lang === 'bn' ? 'লগইন' : 'Sign in'}</span>
             </button>
           )}
 
-          {/* Exit / Home link */}
+          {/* Back to Site Link */}
           <Link
             href="/"
-            className="text-xs font-sans text-ink-muted hover:text-ink px-2 py-1 transition-colors"
+            className="text-xs font-sans text-ink-muted hover:text-green-deep px-1.5 sm:px-2 py-1 transition-colors whitespace-nowrap"
             title="Return to Nothi AI landing page"
           >
-            {lang === 'bn' ? 'প্রস্থান' : 'Exit'}
+            {lang === 'bn' ? 'মূল সাইট' : 'Back to site'}
           </Link>
         </div>
       </header>
@@ -729,22 +723,24 @@ export default function ChatPage() {
       {/* ── 2. WORKSPACE BODY: SIDEBAR + CONVERSATION COLUMN ── */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Mobile Backdrop Overlay */}
-        {sidebarOpen && (
+        {isMobileDrawerOpen && (
           <div
-            className="fixed inset-0 z-30 bg-ink/40 md:hidden backdrop-blur-2xs"
-            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 z-30 bg-ink/30 md:hidden backdrop-blur-2xs"
+            onClick={() => setIsMobileDrawerOpen(false)}
           />
         )}
 
         {/* ── 2A. LEFT SIDEBAR (COLLAPSIBLE 280PX, SLIDE-OVER ON MOBILE) ── */}
         <aside
-          className={`fixed md:static inset-y-0 left-0 z-40 w-72 bg-paper border-r border-border flex flex-col justify-between transition-transform duration-200 ease-in-out shadow-lg md:shadow-none ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full md:-ml-72'
+          className={`fixed md:static inset-y-0 left-0 z-40 w-[280px] bg-[#FAF7F2] border-r border-border/80 flex flex-col justify-between transition-transform duration-200 ease-in-out shadow-lg md:shadow-none shrink-0 ${
+            isMobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+          } ${
+            isDesktopSidebarCollapsed ? 'md:-ml-[280px]' : 'md:translate-x-0 md:ml-0'
           }`}
           style={{ top: '60px', height: 'calc(100dvh - 60px)' }}
         >
           <div className="flex flex-col h-full overflow-hidden">
-            {/* Top Button: New Chat Pill */}
+            {/* Top Button: "+ New chat" */}
             <div className="p-3 border-b border-border/80">
               <button
                 type="button"
@@ -752,15 +748,15 @@ export default function ChatPage() {
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-green-deep hover:bg-green-mid text-paper font-sans text-xs font-semibold transition-all shadow-xs cursor-pointer active:scale-98"
               >
                 <span className="text-base leading-none font-bold">+</span>
-                <span>{lang === 'bn' ? 'নতুন পরীক্ষণ শুরু করুন' : 'New Examination'}</span>
+                <span>{lang === 'bn' ? 'নতুন আলাপ' : 'New chat'}</span>
               </button>
             </div>
 
-            {/* Conversation List with Relative Dates */}
+            {/* Conversation List Grouped by Today / Yesterday / Earlier */}
             <div className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
               {groupedSessions.map((group) => (
                 <div key={group.label} className="space-y-1">
-                  <div className="px-3 text-[11px] font-sans font-semibold text-ink-muted">
+                  <div className="px-3 text-[11px] font-sans font-semibold text-ink-muted/80 uppercase tracking-wider">
                     {group.label}
                   </div>
 
@@ -771,29 +767,13 @@ export default function ChatPage() {
                       <div
                         key={session.id}
                         onClick={() => handleSelectSession(session.id)}
-                        className={`group relative flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-sans transition-all cursor-pointer ${
+                        className={`group relative flex items-center justify-between px-3 py-2 rounded-lg text-xs font-sans transition-all cursor-pointer ${
                           isActive
-                            ? 'bg-paper-dark border-l-3 border-green-deep text-green-deep font-semibold shadow-2xs'
-                            : 'text-ink hover:bg-paper-light'
+                            ? 'bg-paper-dark/80 border-l-2 border-green-deep text-green-deep font-semibold shadow-2xs'
+                            : 'text-ink hover:bg-paper-dark/40'
                         }`}
                       >
-                        <div className="flex items-center gap-2 truncate pr-2">
-                          <svg
-                            width="13"
-                            height="13"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className={`shrink-0 ${isActive ? 'text-green-deep' : 'text-ink-muted/70'}`}
-                          >
-                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                            <path d="M14 2v6h6" />
-                            <path d="M16 13H8" />
-                            <path d="M16 17H8" />
-                          </svg>
-                          <span className="truncate">{session.title}</span>
-                        </div>
+                        <span className="truncate pr-2">{session.title}</span>
 
                         {/* Three dots menu */}
                         <ChatSessionMenu
@@ -809,62 +789,16 @@ export default function ChatPage() {
               ))}
             </div>
 
-            {/* Sidebar Safe Footer (With Sign In / Profile) */}
-            <div className="p-3.5 border-t border-border bg-paper-light space-y-2.5 pb-8 sm:pb-5">
-              {/* User Account / Sign In Pill */}
-              {user ? (
-                <div className="p-3 rounded-2xl bg-paper border border-border space-y-2 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono uppercase text-green-deep font-bold flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                      Active Session
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => signOut()}
-                      className="text-[11px] font-sans font-medium text-ink-muted hover:text-vermillion cursor-pointer transition-colors"
-                      title="Sign out"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                  <div
-                    onClick={() => setSignInModalOpen(true)}
-                    className="truncate cursor-pointer hover:opacity-80 transition-opacity"
-                  >
-                    <div className="text-xs font-bold text-ink truncate">{user.name}</div>
-                    <div className="text-[10px] text-ink-muted truncate font-mono">{user.email}</div>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setSignInModalOpen(true)}
-                  className="w-full py-2.5 px-3 rounded-xl border border-border bg-paper hover:bg-paper-dark text-xs font-sans font-semibold text-ink transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                  <span>Sign In / Login</span>
-                </button>
-              )}
-
+            {/* Sidebar Safe Footer: One disclaimer text link only (laws_corpus.json) */}
+            <div className="p-4 border-t border-border/80 text-center pb-8 safe-bottom">
               <button
                 type="button"
                 onClick={() => setCorpusListOpen(true)}
-                className="w-full flex items-center justify-between text-xs font-sans text-ink-muted hover:text-green-deep transition-colors pt-1"
+                className="text-xs font-mono text-ink-muted hover:text-green-deep transition-colors cursor-pointer"
+                title="View verified statutory corpus"
               >
-                <span>28 sections verified</span>
-                <span className="font-mono text-[10px]">laws_corpus.json</span>
+                laws_corpus.json
               </button>
-
-              <Link
-                href="/"
-                className="block text-xs font-sans text-ink-muted hover:text-ink transition-colors"
-              >
-                ← {lang === 'bn' ? 'হোমপেজে ফিরে যান' : 'Back to Home'}
-              </Link>
             </div>
           </div>
         </aside>
@@ -873,150 +807,46 @@ export default function ChatPage() {
         <main
           ref={chatScrollContainerRef}
           onScroll={handleScroll}
-          className="flex-1 flex flex-col h-full overflow-y-auto relative"
+          className="flex-1 flex flex-col h-full overflow-y-auto relative bg-[#F6F1E7]"
           role="log"
           aria-live="polite"
         >
-          <div className="flex-1 flex flex-col justify-between max-w-[760px] mx-auto w-full px-4 sm:px-6 py-8">
-            {/* ── EMPTY STATE (CREATIVE, MODERN, SLEEK) ── */}
+          <div className="flex-1 flex flex-col justify-between max-w-[760px] mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
+            {/* ── EMPTY STATE (CLERK'S READING ROOM) ── */}
             {messages.length === 0 && !isThinking && !isStreaming ? (
-              <div className="my-auto py-6 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-                {/* Modern Pill Badge */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-paper border border-brass/40 shadow-2xs text-xs font-mono font-bold text-ink w-fit">
-                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                    <span className="text-green-deep">Deterministic Legal Intelligence</span>
-                    <span className="text-brass font-normal">• 28 Verified Sections</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setCorpusListOpen(true)}
-                    className="text-xs font-mono text-ink-muted hover:text-green-deep transition-colors w-fit flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>View Act Index</span>
-                    <span>→</span>
-                  </button>
-                </div>
-
-                {/* Main Hero Question */}
-                <div className="space-y-2.5">
-                  <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-extrabold text-green-deep tracking-tight leading-[1.15]">
-                    {lang === 'bn' ? 'কী আইনি তথ্য যাচাই করতে চান?' : 'What would you like to verify today?'}
+              <div className="my-auto py-8 sm:py-14 space-y-7 animate-in fade-in duration-300">
+                {/* Greeting & Verification Subtitle */}
+                <div className="space-y-3">
+                  <h1 className="font-heading text-3xl sm:text-4xl lg:text-[42px] font-normal text-ink tracking-tight leading-tight">
+                    {lang === 'bn' ? 'কী আইনি তথ্য যাচাই করতে চান?' : 'What would you like to check?'}
                   </h1>
-                  <p className="font-sans text-sm sm:text-base text-ink-muted leading-relaxed max-w-xl">
+                  <p className="font-sans text-base text-ink-muted leading-relaxed">
                     {lang === 'bn'
-                      ? 'সাফ কবলা দলিল, আরএস/বিএস খতিয়ান ও এনআইডি রেকর্ড পরীক্ষণ। শূন্য এআই বিভ্রান্তি—প্রতিটি উত্তর ২৮টি সংবিধিবদ্ধ আইনি ধারার ভিত্তিতে সুনির্দিষ্ট।'
-                      : 'Deterministic cross-parity examination for property deeds, collectorate khatians, and identity smart cards. Zero AI hallucination guaranteed.'}
+                      ? 'উত্তর কেবল বাংলাদেশ ভূমি আইনের ২৮টি যাচাইকৃত ধারার ভিত্তিতে দেওয়া হয়।'
+                      : 'Answers come only from 28 verified sections of Bangladeshi property law.'}
                   </p>
                 </div>
 
-                {/* ── INTERACTIVE BENCHMARK BENCH (ONE-CLICK EXAMINATIONS) ── */}
-                <div className="rounded-2xl border border-border/80 bg-paper-dark/30 p-4 space-y-3 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono font-bold text-ink uppercase tracking-wider flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-brass animate-pulse" />
-                      1-Click Interactive Benchmark Dockets
-                    </span>
-                    <span className="text-[10px] font-mono text-ink-muted">Click to test pipeline live:</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => handleSendMessage('Examine Saf Kabala Deed #4108/2023 signed on 15/08/2023 presented on 22/12/2023 under Section 23 of Registration Act 1908.')}
-                      className="p-3 rounded-xl border border-border bg-paper hover:border-brass hover:shadow-sm text-left transition-all group cursor-pointer"
-                    >
-                      <div className="text-[10px] font-mono font-bold text-green-deep">Deed Sec. 23 Check</div>
-                      <div className="text-xs font-bold text-ink group-hover:text-green-deep mt-0.5">4-Month Window</div>
-                      <div className="text-[10px] font-mono text-brass font-bold mt-1.5 flex items-center gap-1">Run Audit &rarr;</div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSendMessage('Audit Khatian No. 341 against Deed Dag 412: check if vendor holds mutated title under SAT Act 1950.')}
-                      className="p-3 rounded-xl border border-border bg-paper hover:border-brass hover:shadow-sm text-left transition-all group cursor-pointer"
-                    >
-                      <div className="text-[10px] font-mono font-bold text-green-deep">RS/BS Khatian</div>
-                      <div className="text-xs font-bold text-ink group-hover:text-green-deep mt-0.5">Dag & Title Chain</div>
-                      <div className="text-[10px] font-mono text-brass font-bold mt-1.5 flex items-center gap-1">Run Audit &rarr;</div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSendMessage('Validate Smart NID format for Vendor (10 digits) and Purchaser (17 digits) under Rule 3 of NID Rules 2010.')}
-                      className="p-3 rounded-xl border border-border bg-paper hover:border-brass hover:shadow-sm text-left transition-all group cursor-pointer"
-                    >
-                      <div className="text-[10px] font-mono font-bold text-green-deep">Rule 3 Smart NID</div>
-                      <div className="text-xs font-bold text-ink group-hover:text-green-deep mt-0.5">Digit Formats</div>
-                      <div className="text-[10px] font-mono text-brass font-bold mt-1.5 flex items-center gap-1">Run Audit &rarr;</div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2x2 Interactive Modern Suggestion Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-                  {EMPTY_SUGGESTIONS.map((sug, i) => {
-                    const title = lang === 'bn' ? sug.titleBn : sug.titleEn;
-                    const text = lang === 'bn' ? sug.textBn : sug.textEn;
-
+                {/* Four Plain Text Rows Separated by Thin Rules */}
+                <div className="border-t border-border/80">
+                  {EMPTY_SUGGESTIONS.map((item, idx) => {
+                    const text = lang === 'bn' ? item.textBn : item.textEn;
                     return (
                       <button
-                        key={i}
+                        key={idx}
                         type="button"
                         onClick={() => handleSendMessage(text)}
-                        className="group text-left p-4 sm:p-5 rounded-2xl bg-paper border border-border/80 hover:border-brass/70 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative flex flex-col justify-between cursor-pointer overflow-hidden shadow-2xs"
+                        className="group w-full py-4 sm:py-4.5 border-b border-border/80 flex items-center justify-between text-left transition-colors hover:bg-paper-dark/30 px-2 -mx-2 rounded-sm cursor-pointer"
                       >
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-green-deep px-2 py-0.5 rounded-full bg-paper-dark border border-border">
-                              <span>{sug.icon}</span>
-                              <span className="truncate max-w-[190px]">{sug.tag}</span>
-                            </span>
-                            <span className="text-ink-muted/50 group-hover:text-brass group-hover:translate-x-1 group-hover:-translate-y-0.5 transition-all text-sm font-bold">
-                              ↗
-                            </span>
-                          </div>
-
-                          <h3 className="font-heading text-sm sm:text-base font-bold text-ink group-hover:text-green-deep transition-colors">
-                            {title}
-                          </h3>
-
-                          <p className="font-sans text-xs text-ink-muted leading-relaxed">
-                            {text}
-                          </p>
-                        </div>
-
-                        <div className="pt-3 text-[10px] font-mono text-brass font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <span>Ask Nothi AI</span>
-                          <span>→</span>
-                        </div>
+                        <span className="font-sans text-base text-ink group-hover:text-green-deep transition-colors pr-4 leading-snug">
+                          {text}
+                        </span>
+                        <span className="text-ink-muted/60 group-hover:text-green-deep group-hover:translate-x-1.5 transition-all text-base shrink-0 select-none">
+                          &rarr;
+                        </span>
                       </button>
                     );
                   })}
-                </div>
-
-                {/* Quick Document Upload Callout Banner */}
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-3.5 rounded-2xl border border-dashed border-border/90 hover:border-brass bg-paper-dark/30 hover:bg-paper-dark/60 transition-all flex items-center justify-between cursor-pointer group shadow-2xs"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-9 h-9 rounded-xl bg-green-deep/10 text-green-deep flex items-center justify-center text-base font-bold group-hover:scale-110 transition-transform">
-                      📂
-                    </span>
-                    <div>
-                      <span className="text-xs font-semibold text-ink group-hover:text-green-deep transition-colors">
-                        {lang === 'bn' ? 'দলিল বা খতিয়ান ফাইল আপলোড করুন' : 'Drop or attach property records'}
-                      </span>
-                      <p className="text-[11px] text-ink-muted font-sans">
-                        Saf Kabala deeds, RS/BS Khatians, or NID smart cards (PDF, JPG, PNG up to 15 MB)
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-green-deep px-3 py-1 rounded-full bg-paper border border-border group-hover:border-brass transition-colors shrink-0">
-                    Upload &rarr;
-                  </span>
                 </div>
               </div>
             ) : (
@@ -1034,9 +864,9 @@ export default function ChatPage() {
                         isUser ? 'items-end' : 'items-start'
                       } ${isConsecutive ? 'mt-2' : 'mt-6'}`}
                     >
-                      {/* USER MESSAGE: Bottle-Green Filled Bubble (16px, Sender Flatter Corner) */}
+                      {/* USER MESSAGE: Bottle-Green Filled Bubble (16px, Sender Flatter Corner, 80% Max Width) */}
                       {isUser ? (
-                        <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-tr-xs bg-green-deep text-paper p-4 text-sm font-sans leading-relaxed shadow-xs">
+                        <div className="max-w-[80%] rounded-2xl rounded-tr-xs bg-green-deep text-paper p-4 text-base font-sans leading-relaxed shadow-xs">
                           {/* Attached files inside message */}
                           {msg.attachments && msg.attachments.length > 0 && (
                             <div className="mb-3 space-y-1.5 pb-2 border-b border-paper/20">
@@ -1077,7 +907,7 @@ export default function ChatPage() {
 
                           <div className="whitespace-pre-wrap">{msg.content}</div>
 
-                          <div className="mt-1 text-[10px] font-mono text-paper-dark/70 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="mt-1 text-[10px] font-mono text-paper/70 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                             {mounted &&
                               new Date(msg.timestamp).toLocaleTimeString([], {
                                 hour: '2-digit',
@@ -1086,20 +916,20 @@ export default function ChatPage() {
                           </div>
                         </div>
                       ) : (
-                        /* ASSISTANT MESSAGE: Left-Aligned on Paper Background with Logo Avatar */
+                        /* ASSISTANT MESSAGE: Left-Aligned, NO Bubble Box, Directly on Paper Background */
                         <div className="w-full space-y-3 pl-0 sm:pl-1">
-                          {/* Official Document Reply Header */}
-                          <div className="flex items-center gap-2 text-xs font-sans text-ink">
-                            <AnimatedLogo state="idle" size={18} />
-                            <span className="font-semibold text-green-deep">Nothi AI</span>
+                          {/* Header: 24px AnimatedLogo Avatar + Nothi AI Label */}
+                          <div className="flex items-center gap-2.5 text-xs font-sans text-ink">
+                            <AnimatedLogo state="idle" size={24} />
+                            <span className="font-semibold text-green-deep text-sm">Nothi AI</span>
                             <span className="text-[10px] font-mono text-ink-muted opacity-0 group-hover:opacity-100 transition-opacity">
                               {mounted &&
                                 `• ${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
                             </span>
                           </div>
 
-                          {/* Message Body */}
-                          <div className="pl-6.5">
+                          {/* Message Body: 16px Clean Sans Text */}
+                          <div className="pl-8 sm:pl-8.5">
                             <StreamingTextRenderer
                               text={msg.content}
                               isStreaming={false}
@@ -1107,7 +937,7 @@ export default function ChatPage() {
 
                             {/* "Based on" Verified Citation Chips */}
                             {msg.citations && msg.citations.length > 0 && (
-                              <div className="mt-4 pt-3 border-t border-border flex flex-wrap items-center gap-2">
+                              <div className="mt-4 pt-3 border-t border-border/80 flex flex-wrap items-center gap-2">
                                 <span className="text-xs font-sans text-ink-muted">Based on:</span>
                                 {msg.citations.map((c, cIdx) => (
                                   <CitationPopover
@@ -1120,7 +950,24 @@ export default function ChatPage() {
                               </div>
                             )}
 
-                            {/* Assistant Actions Row (Copy, Regenerate, Thumbs) */}
+                            {/* Follow-up Chips (At most two chips) */}
+                            {msg.content && (
+                              <div className="mt-3.5 flex flex-wrap gap-2">
+                                {getFollowUpChips(msg.content, lang).slice(0, 2).map((chip, chipIdx) => (
+                                  <button
+                                    key={chipIdx}
+                                    type="button"
+                                    onClick={() => handleSendMessage(chip)}
+                                    className="text-xs font-sans px-3 py-1.5 rounded-full border border-border/80 bg-paper hover:border-brass hover:bg-paper-dark/60 text-ink transition-colors cursor-pointer"
+                                  >
+                                    <span>{chip}</span>
+                                    <span className="ml-1 text-brass">&rarr;</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Assistant Actions Row (Copy, Regenerate, Thumbs - Clean SVGs, No Emojis) */}
                             <div className="mt-3 flex items-center gap-4 text-xs font-sans text-ink-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                               <button
                                 type="button"
@@ -1141,7 +988,7 @@ export default function ChatPage() {
                                 Regenerate
                               </button>
 
-                              <div className="flex items-center gap-1 border-l border-border pl-3">
+                              <div className="flex items-center gap-1.5 border-l border-border/80 pl-3">
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -1150,12 +997,15 @@ export default function ChatPage() {
                                       [msg.id]: prev[msg.id] === 'up' ? undefined! : 'up',
                                     }))
                                   }
-                                  className={`p-1 hover:text-ink cursor-pointer ${
-                                    feedbackState[msg.id] === 'up' ? 'text-green-deep font-bold' : ''
+                                  className={`p-1 hover:text-green-deep cursor-pointer transition-colors ${
+                                    feedbackState[msg.id] === 'up' ? 'text-green-deep' : 'text-ink-muted'
                                   }`}
                                   title="Helpful"
+                                  aria-label="Helpful"
                                 >
-                                  👍
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill={feedbackState[msg.id] === 'up' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                                    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                                  </svg>
                                 </button>
                                 <button
                                   type="button"
@@ -1165,12 +1015,15 @@ export default function ChatPage() {
                                       [msg.id]: prev[msg.id] === 'down' ? undefined! : 'down',
                                     }))
                                   }
-                                  className={`p-1 hover:text-ink cursor-pointer ${
-                                    feedbackState[msg.id] === 'down' ? 'text-vermillion font-bold' : ''
+                                  className={`p-1 hover:text-vermillion cursor-pointer transition-colors ${
+                                    feedbackState[msg.id] === 'down' ? 'text-vermillion' : 'text-ink-muted'
                                   }`}
                                   title="Not helpful"
+                                  aria-label="Not helpful"
                                 >
-                                  👎
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill={feedbackState[msg.id] === 'down' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                                    <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3" />
+                                  </svg>
                                 </button>
                               </div>
                             </div>
@@ -1181,7 +1034,7 @@ export default function ChatPage() {
                   );
                 })}
 
-                {/* ── THINKING SEQUENCE (REAL STAGES & SKELETON) ── */}
+                {/* ── 4-STAGE THINKING SEQUENCE (>=500ms EACH & SKELETON) ── */}
                 {isThinking && (
                   <div className="w-full space-y-2 mt-4 pl-0 sm:pl-1">
                     <ThinkingStageIndicator
@@ -1191,15 +1044,15 @@ export default function ChatPage() {
                   </div>
                 )}
 
-                {/* ── ACTIVE FLUID STREAMING TRANSITION ── */}
+                {/* ── WORD-BY-WORD STREAMING TRANSITION ── */}
                 {isStreaming && (
                   <div className="w-full space-y-2 mt-4 pl-0 sm:pl-1">
-                    <div className="flex items-center gap-2 text-xs font-sans text-ink">
-                      <AnimatedLogo state="thinking" size={18} />
-                      <span className="font-semibold text-green-deep">Nothi AI</span>
+                    <div className="flex items-center gap-2.5 text-xs font-sans text-ink">
+                      <AnimatedLogo state="thinking" size={24} />
+                      <span className="font-semibold text-green-deep text-sm">Nothi AI</span>
                     </div>
 
-                    <div className="pl-6.5">
+                    <div className="pl-8 sm:pl-8.5">
                       <StreamingTextRenderer
                         text={streamingText}
                         isStreaming={true}
@@ -1217,51 +1070,16 @@ export default function ChatPage() {
               <button
                 type="button"
                 onClick={() => scrollToBottom()}
-                className="fixed bottom-24 right-6 sm:right-12 z-20 px-3 py-1.5 rounded-full bg-paper border border-border text-ink text-xs font-sans shadow-md hover:bg-paper-dark transition-all cursor-pointer flex items-center gap-1.5"
+                className="fixed bottom-24 right-6 sm:right-12 z-20 px-3 py-1.5 rounded-full bg-paper border border-border/80 text-ink text-xs font-sans shadow-md hover:bg-paper-dark transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <span>↓</span>
                 <span>Jump to latest</span>
               </button>
             )}
 
-            {/* ── 3. DOCKED BOTTOM INPUT BAR ── */}
-            <div className="pt-4 sticky bottom-0 bg-[#fbf9f5]/95 backdrop-blur-md pb-4 z-10">
-              {/* Quick Topic Chips (Visible when actively chatting) */}
-              {messages.length > 0 && (
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 text-[11px] font-mono no-scrollbar">
-                  <span className="text-ink-muted shrink-0 text-[10px] font-bold">Quick add:</span>
-                  <button
-                    type="button"
-                    onClick={() => setInputText('How does Section 23 calculate the 4-month deed registration window?')}
-                    className="px-2.5 py-1 rounded-full bg-paper hover:bg-paper-dark border border-border text-ink whitespace-nowrap transition-colors cursor-pointer shadow-2xs hover:border-brass/60"
-                  >
-                    + Sec. 23 Window
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInputText('Check Lis Pendens suit risk under TPA Section 52')}
-                    className="px-2.5 py-1 rounded-full bg-paper hover:bg-paper-dark border border-border text-ink whitespace-nowrap transition-colors cursor-pointer shadow-2xs hover:border-brass/60"
-                  >
-                    + Lis Pendens Sec. 52
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInputText('What is the valid Smart NID format under Rule 3?')}
-                    className="px-2.5 py-1 rounded-full bg-paper hover:bg-paper-dark border border-border text-ink whitespace-nowrap transition-colors cursor-pointer shadow-2xs hover:border-brass/60"
-                  >
-                    + Rule 3 Smart NID
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInputText('Explain how Dag number mismatch affects title clearance')}
-                    className="px-2.5 py-1 rounded-full bg-paper hover:bg-paper-dark border border-border text-ink whitespace-nowrap transition-colors cursor-pointer shadow-2xs hover:border-brass/60"
-                  >
-                    + Dag Mismatch
-                  </button>
-                </div>
-              )}
-
-              <div className="rounded-2xl bg-paper border border-border/80 shadow-md focus-within:border-brass focus-within:ring-4 focus-within:ring-brass/10 focus-within:shadow-xl transition-all p-3 space-y-2">
+            {/* ── 3. DOCKED BOTTOM INPUT BAR (ROUNDED 16PX, THIN BRASS BORDER) ── */}
+            <div className="pt-4 sticky bottom-0 bg-[#F6F1E7]/95 backdrop-blur-md pb-4 z-10">
+              <div className="rounded-[16px] bg-paper border border-brass/50 shadow-sm focus-within:border-brass focus-within:ring-2 focus-within:ring-brass/20 transition-all p-3 space-y-2">
                 {/* Upload Error Banner */}
                 {attachmentError && (
                   <div className="px-3 py-1.5 rounded-xs bg-vermillion/10 border border-vermillion/30 text-vermillion text-xs font-sans flex items-center justify-between">
@@ -1269,16 +1087,16 @@ export default function ChatPage() {
                     <button
                       type="button"
                       onClick={() => setAttachmentError(null)}
-                      className="font-bold ml-2"
+                      className="font-bold ml-2 cursor-pointer"
                     >
                       ✕
                     </button>
                   </div>
                 )}
 
-                {/* Attached Files Tray with Progress */}
+                {/* Attached Files Tray with Thumbnail, Size, Progress, Remove */}
                 {attachments.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pb-2 border-b border-border">
+                  <div className="flex flex-wrap gap-2 pb-2 border-b border-border/70">
                     {attachments.map((att) => (
                       <div
                         key={att.id}
@@ -1298,14 +1116,15 @@ export default function ChatPage() {
                         )}
                         <div className="truncate max-w-[130px]">
                           <div className="font-semibold truncate">{att.name}</div>
-                          <div className="text-[10px] text-ink-muted font-mono">
-                            {(att.size / 1024).toFixed(1)} KB
+                          <div className="text-[10px] text-ink-muted font-mono flex items-center gap-1">
+                            <span>{(att.size / 1024).toFixed(1)} KB</span>
+                            <span className="text-green-deep">✓</span>
                           </div>
                         </div>
                         <button
                           type="button"
                           onClick={() => removeAttachment(att.id)}
-                          className="ml-1 text-ink-muted hover:text-vermillion p-1 font-bold"
+                          className="ml-1 text-ink-muted hover:text-vermillion p-1 font-bold cursor-pointer"
                           title="Remove file"
                         >
                           ✕
@@ -1315,7 +1134,7 @@ export default function ChatPage() {
                   </div>
                 )}
 
-                {/* Auto-growing Textarea (1 to 6 lines) */}
+                {/* Auto-growing Textarea (1 to 6 lines, 16px text) */}
                 <textarea
                   ref={textareaRef}
                   value={inputText}
@@ -1331,13 +1150,13 @@ export default function ChatPage() {
                   }
                   rows={1}
                   maxLength={1000}
-                  className="w-full bg-transparent resize-none outline-hidden font-sans text-sm text-ink placeholder:text-ink-muted/70 leading-relaxed max-h-40"
+                  className="w-full bg-transparent resize-none outline-hidden font-sans text-base text-ink placeholder:text-ink-muted/70 leading-relaxed max-h-40"
                 />
 
                 {/* Controls: Paperclip, Voice Input, Character Counter, Send/Stop */}
                 <div className="flex items-center justify-between pt-1">
                   <div className="flex items-center gap-1">
-                    {/* Hidden File Picker (PDF, JPG, PNG up to 15MB) */}
+                    {/* Hidden File Picker (PDF, JPG, PNG up to 15MB, max 3) */}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -1352,7 +1171,7 @@ export default function ChatPage() {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       className="p-1.5 rounded-xs text-ink-muted hover:text-green-deep hover:bg-paper-dark transition-colors cursor-pointer"
-                      title="Attach deed scan or PDF"
+                      title="Attach deed scan or PDF (up to 3 files, 15MB)"
                       aria-label="Attach file"
                     >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1370,7 +1189,7 @@ export default function ChatPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {/* Character Counter (appears only when near 1000 limit) */}
+                    {/* Character Counter (appears only when approaching 1000 limit) */}
                     {inputText.length > 800 && (
                       <span className="font-mono text-[11px] text-ink-muted">
                         {inputText.length}/1000
@@ -1382,7 +1201,7 @@ export default function ChatPage() {
                       <button
                         type="button"
                         onClick={handleStop}
-                        className="px-3 py-1.5 rounded-xs bg-vermillion text-paper font-sans text-xs font-semibold hover:bg-vermillion/90 transition-all cursor-pointer flex items-center gap-1 shadow-xs"
+                        className="px-3.5 py-1.5 rounded-xl bg-vermillion text-paper font-sans text-xs font-semibold hover:bg-vermillion/90 transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
                       >
                         <span>■</span>
                         <span>Stop</span>
@@ -1392,7 +1211,7 @@ export default function ChatPage() {
                         type="button"
                         onClick={() => handleSendMessage()}
                         disabled={!inputText.trim() && attachments.length === 0}
-                        className={`px-3.5 py-1.5 rounded-xs text-xs font-sans font-semibold transition-all cursor-pointer ${
+                        className={`px-4 py-1.5 rounded-xl text-xs font-sans font-semibold transition-all cursor-pointer ${
                           inputText.trim() || attachments.length > 0
                             ? 'bg-green-deep text-paper hover:bg-green-mid shadow-xs active:scale-95'
                             : 'bg-paper-dark text-ink-muted/50 cursor-not-allowed'
@@ -1405,8 +1224,8 @@ export default function ChatPage() {
                 </div>
               </div>
 
-              {/* Fixed Legal Note */}
-              <p className="text-center text-[11px] font-sans text-ink-muted pt-2">
+              {/* Fixed Quiet 13px Legal Note */}
+              <p className="text-center text-[13px] font-sans text-ink-muted pt-2.5">
                 Nothi AI explains verified statutory sections. It does not replace a licensed advocate.
               </p>
             </div>
@@ -1456,6 +1275,7 @@ export default function ChatPage() {
           </div>
         </div>
       )}
+
       {/* ── 7. CHAMBER SIGN IN MODAL ── */}
       <SignInModal
         isOpen={signInModalOpen}

@@ -43,7 +43,7 @@ export async function generateMockChatResponse(
           : `I have analyzed your attached National ID document (${fileNames}). Validated under Rule 3 of the National Identity Registration Rules (NIDW Rules, 2010). The identity number structural format, bearer name, and father's name are verified against registry parity rules.`,
         citations: [
           {
-            id: 'nidw_rules_rule3',
+            id: 'nidw_rules_r3',
             act: 'National Identity Registration Rules (NIDW)',
             section: 'Rule 3',
           },

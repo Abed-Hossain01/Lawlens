@@ -76,7 +76,7 @@ export const StreamingTextRenderer = React.memo(function StreamingTextRenderer({
   }, [text, isStreaming, reducedMotion]);
 
   return (
-    <div className="text-sm font-sans text-ink leading-relaxed select-text space-y-1">
+    <div className="text-base font-sans text-ink leading-relaxed select-text space-y-1.5">
       {renderedContent}
 
       {/* Blinking Brass Caret at end of streaming stream */}
