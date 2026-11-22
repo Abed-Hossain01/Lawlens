@@ -1,36 +1,153 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LawLens (ল-লেন্স) v1.0
+### Legal Document Auditing System for Bangladesh Property Transfers
+**By Team Boron at Pointfex**
 
-## Getting Started
+LawLens is an automated legal vetting system for Bangladeshi property transactions. It enables Legal Vetting Officers to ingest a document triad (**Saf Kabala Property Deed**, **RS/BS Khatian**, **National ID Card**), performs multimodal entity extraction, executes deterministic statutory checks, maps findings to verified legal sections, and renders an official vetting memorandum.
 
-First, run the development server:
+---
 
+## 1. Quick Start
+
+### Prerequisites
+- Node.js 18+ (tested on Node.js 20+)
+- npm 9+
+
+### Installation & Run
 ```bash
+# Install dependencies
+npm install
+
+# Run the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Run unit tests (Citation integrity filter)
+npx vitest run
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
+The application runs at `http://localhost:3000`.
+
+---
+
+## 2. System Architecture & Pages
+
+- **`/` (Landing Page)**: 
+  - Registry-office desk 3D experience (built with Three.js / React Three Fiber / Drei).
+  - 4-step scroll-driven simulation: Ingestion (fan out & lift) → Extraction (multimodal scanline) → Cross-document audit (field alignment & mismatch detection) → Statutory verdict (physical stamp press).
+  - Automatic graceful degradation on mobile (<768px) and strict `prefers-reduced-motion` compliance via 2D diagnostic fallback.
+  - Pipeline strip covering the 5 stages from the SRS.
+  - Phase 1 statutory coverage specifications and CTA to the audit workspace.
+- **`/audit` (Audit Workspace)**:
+  - **Left Pane**: Multimodal document viewer with document switcher tabs (Deed, Khatian, NID), zoom/page controls, and live bounding-box highlighting synchronized with risk flags.
+  - **Right Pane**:
+    1. **Intake Section**: Drag-and-drop zone (PDF, JPG, PNG, max 15MB each, up to 3 files), plain-language validation alerts, manual document classifier, and one-click benchmark loaders for **Packet A (Compliant)** and **Packet B (3 Planted Defects)**.
+    2. **Entity Comparison Matrix**: Cross-document entity comparison table with bilingual Bangla/English text and clear mismatch highlighting.
+    3. **Risk Flags**: Red / Amber / Green statutory flags with shape badges (`▲ [CRITICAL DEFECT]`, `◆ [STATUTORY WARNING]`, `■ [STATUTORY COMPLIANCE]`) ensuring non-reliance on color alone.
+    4. **Citation Inspector**: Drawer with verbatim statutory text from `laws_corpus.json` and supporting rule metadata.
+    5. **Vetting Memorandum**: Official attestation document with inline statutory citation chips, verdict seal, and a `@media print` stylesheet.
+    6. **Pipeline Progress State**: Calm inline progress sequence showing the 5 stages within the 18-second SLA (NFR-2).
+- **Shared Shell**:
+  - Header with navigation and live **EN / BN** bilingual toggle.
+  - Footer with credit: `LawLens v1.0, Team Boron, Pointfex`.
+
+---
+
+## 3. How to Connect the FastAPI Backend
+
+The frontend is built against an isolated API abstraction layer in `src/lib/api.ts`. Swapping from the mock layer to the live FastAPI backend is a **single-file change** in `src/lib/api.ts`.
+
+### Steps:
+1. Set your backend URL in `.env.local`:
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+   ```
+2. In `src/lib/api.ts`, update `runAudit` to call the FastAPI endpoint:
+   ```typescript
+   export async function runAudit(
+     bundle: AuditBundle,
+     onProgress?: (progress: PipelineProgress) => void
+   ): Promise<AuditResult> {
+     const formData = new FormData();
+     // Append uploaded files or packet benchmark flags
+     bundle.files.forEach((file) => {
+       // if file has File object: formData.append('files', file);
+     });
+
+     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/audit/run`, {
+       method: 'POST',
+       body: formData,
+     });
+
+     if (!response.ok) {
+       throw new Error(`Audit failed with status ${response.status}`);
+     }
+
+     return await response.json();
+   }
+   ```
+3. Update `uploadBundle` and `getCorpusSection` to point to `/audit/upload` and `/corpus/{id}` respectively.
+
+---
+
+## 4. File Manifest
+
+```
+LawLens/
+├── src/
+│   ├── app/
+│   │   ├── audit/
+│   │   │   └── page.tsx              # Audit workspace page (split screen)
+│   │   ├── globals.css               # Design tokens, registry palette, print rules
+│   │   ├── layout.tsx                # Root layout with fonts & LangProvider
+│   │   └── page.tsx                  # Landing page (hero, pipeline, phase 1)
+│   ├── components/
+│   │   ├── Header.tsx                # Global navigation & EN/BN switcher
+│   │   ├── Footer.tsx                # Official footer & credit
+│   │   ├── audit/
+│   │   │   ├── CitationChip.tsx      # Citation badge with integrity validation
+│   │   │   ├── CitationDrawer.tsx    # Statutory section inspector side-drawer
+│   │   │   ├── DocumentViewer.tsx    # Left-pane viewer with active bounding boxes
+│   │   │   ├── EntityMatrix.tsx      # Cross-document comparison table
+│   │   │   ├── IntakeSection.tsx     # File upload & benchmark packet loaders
+│   │   │   ├── PipelineProgressTracker.tsx # 5-stage progress indicator (<18s)
+│   │   │   ├── RiskFlags.tsx         # Red/Amber/Green flags with shapes & text
+│   │   │   └── VettingMemo.tsx       # Printable official vetting memorandum
+│   │   └── landing/
+│   │       ├── DeskScene.tsx         # 3D Three.js registry desk scene
+│   │       ├── Hero3DSection.tsx     # Scroll-driven hero container
+│   │       ├── ReducedMotionFallback.tsx # 2D fallback for mobile & prefers-reduced-motion
+│   │       └── RegistryDeskCanvas.tsx# React Three Fiber canvas wrapper
+│   ├── data/
+│   │   └── laws_corpus.json          # 28 statutory sections (verified Sec. 23 + placeholders)
+│   ├── lib/
+│   │   ├── __tests__/
+│   │   │   └── citations.test.ts     # Vitest unit test for NFR-1 citation filter
+│   │   ├── api.ts                    # Single API client interface
+│   │   ├── citations.ts              # Citation verification & corpus lookups
+│   │   └── lang.tsx                  # EN/BN bilingual context & dictionary
+│   ├── mocks/
+│   │   └── packets.ts                # Benchmark Packet A & Packet B data
+│   └── types/
+│       └── index.ts                  # TypeScript definitions (AuditResult, Flag, etc.)
+├── package.json
+├── tsconfig.json
+├── vitest.config.ts
+└── README.md
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 5. Placeholders to Replace with Real Data
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+When the FastAPI backend and final legal corpus are ready, update the following placeholders:
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Item | File Location | Description |
+|---|---|---|
+| **27 Statutory Sections** | `src/data/laws_corpus.json` | Section 23 of Registration Act 1908 is verified. The other 27 sections (Registration Act 17, 24, 25, 28, 32, 47, 49, 52; TPA 3, 6, 7, 10, 17, 52, 54, 55; LCPRA 3, 4, 5, 6, 7, 8, 9; NIDW Rules 3, 4, 5, 6) have clearly marked text: `PLACEHOLDER: replace with verified text from laws_corpus.json (28 sections)`. Replace with verified statutory text from the legal corpus. |
+| **Document Bounding Boxes** | `src/types/index.ts` & `src/components/audit/DocumentViewer.tsx` | Currently uses representative bounding box coordinates for Deed, Khatian, and NID defect regions. Replace with normalized bounding boxes `[ymin, xmin, ymax, xmax]` provided by the backend's multimodal extraction service. |
+| **API Endpoints** | `src/lib/api.ts` | Replace simulated delays and mock objects in `runAudit()`, `uploadBundle()`, and `getCorpusSection()` with live FastAPI fetch/Axios requests. |
+| **Document Scan Assets** | `src/components/audit/DocumentViewer.tsx` | Replace mock vector-rendered SVG/HTML deed sheets with high-resolution scanned PDFs/TIFFs once ingested from the live file store (e.g. S3 / MinIO). |
