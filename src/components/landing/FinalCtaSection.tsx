@@ -38,10 +38,10 @@ export function FinalCtaSection() {
           </button>
 
           <Link
-            href="/audit"
+            href="/chat"
             className="px-6 py-3.5 rounded-xs border-2 border-border bg-paper hover:bg-paper-light text-ink font-sans text-sm font-semibold transition-colors shadow-2xs"
           >
-            Open Audit Workspace
+            {lang === 'bn' ? 'নথি এআই অন্বেষণ করুন →' : 'Explore Nothi AI →'}
           </Link>
         </div>
       </div>

@@ -19,12 +19,12 @@ export function Header() {
   const pathname = usePathname();
 
   const isHome = pathname === '/';
-  const isAudit = pathname === '/audit';
+  const isChat = pathname === '/chat';
 
   // Scroll states
   const [isScrolled, setIsScrolled] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const [activeSection, setActiveSection] = useState<'home' | 'ask-ai' | 'how-it-works' | 'who-its-for' | 'citations' | 'pricing'>('home');
+  const [activeSection, setActiveSection] = useState<'home' | 'explore' | 'who-its-for' | 'citations' | 'pricing'>('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const reducedMotion = useSyncExternalStore(
     subscribeReducedMotion,
@@ -63,12 +63,11 @@ export function Header() {
 
       // 3. Scroll-spy for landing page
       if (isHome) {
-        const sections: Array<'pricing' | 'citations' | 'who-its-for' | 'how-it-works' | 'ask-ai'> = [
+        const sections: Array<'pricing' | 'citations' | 'who-its-for' | 'explore'> = [
           'pricing',
           'citations',
           'who-its-for',
-          'how-it-works',
-          'ask-ai',
+          'explore',
         ];
         let found = false;
         for (const id of sections) {
@@ -134,11 +133,11 @@ export function Header() {
 
   // Nav link definitions (Modern Business Product)
   const navLinks = [
-    { id: 'ask-ai', labelEn: 'Ask AI', labelBn: 'এআই প্রশ্ন', href: isHome ? '#ask-ai' : '/#ask-ai' },
-    { id: 'how-it-works', labelEn: 'How it works', labelBn: 'কার্যপ্রণালী', href: isHome ? '#how-it-works' : '/#how-it-works' },
+    { id: 'explore', labelEn: 'Explore', labelBn: 'অনুসন্ধান', href: isHome ? '#explore' : '/#explore' },
     { id: 'who-its-for', labelEn: 'Who it’s for', labelBn: 'কার জন্য', href: isHome ? '#who-its-for' : '/#who-its-for' },
     { id: 'citations', labelEn: 'Citations', labelBn: 'আইনি ধারা', href: isHome ? '#citations' : '/#citations' },
     { id: 'pricing', labelEn: 'Pricing', labelBn: 'মূল্যতালিকা', href: isHome ? '#pricing' : '/pricing' },
+    { id: 'chat', labelEn: 'AI Assistant', labelBn: 'এআই সহকারী', href: '/chat' },
   ];
 
   return (
@@ -158,7 +157,7 @@ export function Header() {
         } ${
           isVisible ? 'translate-y-0' : '-translate-y-full pointer-events-none'
         } ${
-          isAudit
+          isChat
             ? 'bg-paper border-b border-border-light text-ink shadow-[0_1px_3px_rgba(0,0,0,0.05)]'
             : isScrolled
             ? 'bg-paper/95 backdrop-blur-md border-b border-border-light text-ink shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
@@ -244,12 +243,12 @@ export function Header() {
               </button>
             </div>
 
-            {/* Primary Filled Button: "Audit Workspace →" */}
+            {/* Primary Filled Button: "Explore Nothi AI →" */}
             <Link
-              href="/audit"
+              href="/chat"
               className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xs font-sans text-sm font-semibold transition-all duration-150 shadow-sm focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden active:scale-95 cursor-pointer bg-green-deep text-paper hover:bg-green-mid"
             >
-              <span>{lang === 'bn' ? 'কার্যক্ষেত্র →' : 'Audit Workspace →'}</span>
+              <span>{lang === 'bn' ? 'অনুসন্ধান করুন →' : 'Explore Assistant →'}</span>
             </Link>
 
             {/* Mobile Hamburger Menu Button (<768px) */}
@@ -311,11 +310,11 @@ export function Header() {
             {/* Bottom Primary Button */}
             <div className="pt-6 border-t border-border space-y-3">
               <Link
-                href="/audit"
+                href="/chat"
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xs bg-green-deep text-paper font-sans text-sm font-semibold hover:bg-green-mid shadow-md"
               >
-                <span>{lang === 'bn' ? 'কার্যক্ষেত্র →' : 'Audit Workspace →'}</span>
+                <span>{lang === 'bn' ? 'অনুসন্ধান করুন →' : 'Explore Assistant →'}</span>
               </Link>
 
               <p className="text-center text-xs text-ink-muted font-sans">

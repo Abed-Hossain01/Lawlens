@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { PLANS, COMPARISON_TABLE, PlanConfig } from '@/config/plans';
+import { PLANS, PlanConfig } from '@/config/plans';
 import { ContactModal } from './ContactModal';
 
 export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
@@ -174,7 +174,7 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
                 <div className="pt-8">
                   {plan.ctaType === 'audit' ? (
                     <Link
-                      href="/audit"
+                      href="/chat"
                       className="w-full py-3 rounded-xs bg-paper-dark hover:bg-border text-ink font-sans text-xs font-bold uppercase tracking-wider text-center block transition-colors border border-border shadow-xs cursor-pointer"
                     >
                       {plan.ctaText} &rarr;
@@ -201,77 +201,6 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
               </div>
             );
           })}
-        </div>
-
-        {/* ── FEATURE COMPARISON TABLE ── */}
-        <div className="mt-20 space-y-6">
-          <div className="text-center space-y-1">
-            <h3 className="font-heading text-2xl font-bold text-green-deep">
-              Comprehensive Feature Comparison
-            </h3>
-            <p className="text-xs font-mono text-ink-muted">
-              All statutory rules strictly enforced across every tier.
-            </p>
-          </div>
-
-          <div className="rounded-sm border-2 border-border bg-paper shadow-sm overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b-2 border-border bg-paper-dark">
-                  <th scope="col" className="p-3.5 sm:p-4 font-mono font-bold text-ink uppercase tracking-wider sticky left-0 bg-paper-dark z-10 w-1/3">
-                    Feature & Verification
-                  </th>
-                  <th scope="col" className="p-3.5 sm:p-4 font-mono font-bold text-ink text-center w-1/5">
-                    Basic
-                  </th>
-                  <th scope="col" className="p-3.5 sm:p-4 font-mono font-bold text-green-deep text-center w-1/5 bg-green-deep/5">
-                    Plus (Chambers)
-                  </th>
-                  <th scope="col" className="p-3.5 sm:p-4 font-mono font-bold text-ink text-center w-1/5">
-                    Pro (Enterprise)
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {COMPARISON_TABLE.map((row, rIdx) => (
-                  <tr key={rIdx} className="hover:bg-paper-light transition-colors">
-                    <td className="p-3.5 sm:p-4 font-sans font-medium text-ink sticky left-0 bg-paper z-10 border-r border-border/40">
-                      <div className="font-semibold">{row.feature}</div>
-                      <div className="text-[10px] font-mono text-ink-muted">{row.category}</div>
-                    </td>
-
-                    <td className="p-3.5 sm:p-4 text-center font-mono">
-                      {typeof row.basic === 'boolean' ? (
-                        row.basic ? <span className="text-green-deep font-bold text-sm">✓</span> : <span className="text-ink-muted/40">—</span>
-                      ) : (
-                        row.basic
-                      )}
-                    </td>
-
-                    <td className="p-3.5 sm:p-4 text-center font-mono bg-green-deep/5 font-semibold text-green-deep">
-                      {typeof row.plus === 'boolean' ? (
-                        row.plus ? <span className="font-bold text-sm">✓</span> : <span className="text-ink-muted/40">—</span>
-                      ) : (
-                        row.plus
-                      )}
-                    </td>
-
-                    <td className="p-3.5 sm:p-4 text-center font-mono">
-                      {row.planned ? (
-                        <span className="px-2 py-0.5 rounded-2xs bg-brass/20 text-brass font-bold text-[10px]">
-                          Planned
-                        </span>
-                      ) : typeof row.pro === 'boolean' ? (
-                        row.pro ? <span className="text-green-deep font-bold text-sm">✓</span> : <span className="text-ink-muted/40">—</span>
-                      ) : (
-                        row.pro
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
 
         {/* ── ACCESSIBLE FAQ ACCORDION ── */}

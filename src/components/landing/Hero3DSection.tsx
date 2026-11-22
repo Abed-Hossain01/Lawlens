@@ -307,12 +307,12 @@ export function Hero3DSection() {
                   <span>{soundEnabled ? '🔊 Sound On' : '🔇 Sound Off'}</span>
                 </button>
 
-                {/* Direct Workspace CTA */}
+                {/* Direct Explore / Chat CTA */}
                 <Link
-                  href="/audit"
+                  href="/chat"
                   className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-xs bg-brass text-desk-dark hover:bg-brass-light font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer ml-auto sm:ml-0"
                 >
-                  <span>{lang === 'bn' ? 'কার্যক্ষেত্র' : 'Workspace'}</span>
+                  <span>{lang === 'bn' ? 'অনুসন্ধান করুন' : 'Explore Assistant'}</span>
                   <span>→</span>
                 </Link>
               </div>

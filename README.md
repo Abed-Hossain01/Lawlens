@@ -13,12 +13,13 @@ Nothi AI (নথি এআই) is a deterministic legal document vetting and sta
   - Scroll-driven simulation across 4 stages: Ingestion (fan out & lift) → Extraction (multimodal scanline) → Cross-audit (field alignment & mismatch detection) → Statutory verdict (physical stamp press).
   - Graceful degradation on mobile (<768px) and strict `prefers-reduced-motion` compliance.
 
-- **Citation-Locked AI Chat ("Ask Nothi AI")**:
-  - **Shared State Architecture**: Persistent across pages via `ChatContext`, accessible via two synchronized entry points:
-    1. **Doorway Section**: Interactive full-width prompt bar with 4 suggested statutory inquiry chips immediately following the hero.
-    2. **Floating Launcher**: 56px brass launcher fixed at the bottom-right of every page with a 6-second attention pulse and expandable label.
-  - **Deterministic Statutory Grounding (SRS FR-4.2, NFR-1)**: Every response from the assistant is filtered through `filterValidCitations()`. Only citations existing in `laws_corpus.json` (28 sections across 4 Acts) can ever render as interactive chips; unverified or fabricated citations are stripped before rendering.
+- **Dedicated Gemini-Style AI Assistant (`/chat`)**:
+  - Full-page dedicated chat experience modeled after Google Gemini web interface.
+  - **Collapsible Sidebar**: New chat button, recent conversation session history (persisted in `localStorage`), switch/delete conversations, statutory corpus status.
+  - **Document & Image Sharing**: Users can drag and drop or attach deed scans (JPG, PNG) and Khatian ledgers (PDF). Renders thumbnail previews with click-to-enlarge lightbox modal.
+  - **Deterministic Statutory Grounding (SRS FR-4.2, NFR-1)**: Every response from the assistant is filtered through `filterValidCitations()`. Only citations existing in `laws_corpus.json` (28 sections across 4 Acts) can render as interactive chips; unverified or fabricated citations are stripped.
   - **Out-of-Corpus Refusal**: When queried about unverified topics (tax clearances, non-land topics), the assistant explicitly refuses rather than hallucinating statutory law.
+  - **Export & Voice**: Speech dictation support, copy-to-clipboard with visual feedback, and text export for legal case files.
 
 - **3D Statutory Citation Gate**:
   - CSS 3D transformed registry checkpoint demonstrating live filtering of 4 sample citations (`reg_1908_sec23`, `tp_1882_sec52`, `land_crime_2023_sec4`, and fabricated `reg_1908_sec999_fake_clause`).
@@ -27,7 +28,7 @@ Nothi AI (নথি এআই) is a deterministic legal document vetting and sta
 - **Transparent Three-Tier Pricing**:
   - Dedicated `/pricing` route and landing page pricing section with monthly/yearly billing (20% discount).
   - 3 Tiers: **Basic** (pay-as-you-go title verification), **Plus** (high-volume title vetting with audit certificates), and **Pro** (unlimited multi-office banking API).
-  - Sticky feature comparison matrix and 6-item accessible FAQ accordion.
+  - 6-item accessible FAQ accordion and contact request modals.
 
 - **`/audit` Dual-Pane Workspace**:
   - **Left Pane**: Multimodal document viewer with document switcher tabs (Deed, Khatian, NID), zoom/page controls, and live synchronized bounding-box highlighting.

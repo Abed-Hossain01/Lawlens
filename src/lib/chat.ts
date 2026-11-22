@@ -8,11 +8,20 @@ export interface ChatCitation {
   section?: string;
 }
 
+export interface ChatAttachment {
+  id: string;
+  name: string;
+  type: 'image' | 'pdf';
+  size: number;
+  dataUrl?: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   citations?: ChatCitation[];
+  attachments?: ChatAttachment[];
   timestamp: number;
 }
 
@@ -39,7 +48,12 @@ export async function sendChatMessage(
   }
 
   // 1. Generate statutory answer from mock layer
-  const rawResponse = await generateMockChatResponse(lastUserMessage.content, lang, onChunk);
+  const rawResponse = await generateMockChatResponse(
+    lastUserMessage.content,
+    lang,
+    onChunk,
+    lastUserMessage.attachments
+  );
 
   // 2. Strict citation lock: verify each citation ID against laws_corpus.json
   const verifiedCitations: ChatCitation[] = [];

@@ -4,8 +4,6 @@ import { LangProvider } from "@/lib/lang";
 import { ChatProvider } from "@/context/ChatContext";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { ChatDrawer } from "@/components/chat/ChatDrawer";
-import { ChatFloatingLauncher } from "@/components/chat/ChatFloatingLauncher";
 import "./globals.css";
 
 const inter = Inter({
@@ -61,8 +59,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Header />
             <main id="main-content" className="flex-1 w-full">{children}</main>
             <Footer />
-            <ChatDrawer />
-            <ChatFloatingLauncher />
           </ChatProvider>
         </LangProvider>
       </body>
