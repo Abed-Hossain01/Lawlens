@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLang } from '@/lib/lang';
 import { Logo } from './Logo';
+import { useAuth } from '@/lib/auth';
+import { SignInModal } from '@/components/auth/SignInModal';
 
 const subscribeReducedMotion = (callback: () => void) => {
   const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -16,11 +18,13 @@ const getReducedMotionServerSnapshot = () => false;
 
 export function Header() {
   const { lang, setLang } = useLang();
+  const { user } = useAuth();
   const pathname = usePathname();
 
   const isHome = pathname === '/';
 
-  // Scroll states
+  // Scroll & auth states
+  const [signInModalOpen, setSignInModalOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [activeSection, setActiveSection] = useState<'home' | 'explore' | 'who-its-for' | 'citations' | 'pricing'>('home');
@@ -156,13 +160,11 @@ export function Header() {
 
       {/* ── STICKY SITE HEADER (72PX DESKTOP, 60PX MOBILE) ── */}
       <header
-        className={`sticky top-0 z-50 w-full select-none transition-all duration-200 ${
-          isVisible ? 'translate-y-0' : '-translate-y-full pointer-events-none'
-        } ${
-          isScrolled
+        className={`sticky top-0 z-50 w-full select-none transition-all duration-200 ${isVisible ? 'translate-y-0' : '-translate-y-full pointer-events-none'
+          } ${isScrolled
             ? 'bg-paper/90 backdrop-blur-xl border-b border-border/80 text-ink shadow-[0_4px_20px_-4px_rgba(27,67,50,0.06)]'
             : 'bg-paper/80 backdrop-blur-md border-b border-border/60 text-ink shadow-2xs'
-        }`}
+          }`}
       >
         <div className="mx-auto flex h-[60px] md:h-[70px] max-w-[1280px] items-center justify-between px-6 sm:px-8 lg:px-12">
 
@@ -187,11 +189,10 @@ export function Header() {
                   key={link.id}
                   href={link.href}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`relative px-3.5 py-1.5 text-xs lg:text-[13px] font-medium font-sans rounded-full transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden ${
-                    isActive
-                      ? 'bg-green-deep text-paper font-semibold shadow-xs'
-                      : 'text-ink-muted hover:text-ink hover:bg-paper-dark/70'
-                  }`}
+                  className={`relative px-3.5 py-1.5 text-xs lg:text-[13px] font-medium font-sans rounded-full transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden ${isActive
+                    ? 'bg-green-deep text-paper font-semibold shadow-xs'
+                    : 'text-ink-muted hover:text-ink hover:bg-paper-dark/70'
+                    }`}
                 >
                   {lang === 'bn' ? link.labelBn : link.labelEn}
                 </Link>
@@ -213,11 +214,10 @@ export function Header() {
                 role="radio"
                 aria-checked={lang === 'en'}
                 onClick={() => setLang('en')}
-                className={`px-2.5 py-1 rounded-full text-xs font-sans transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden cursor-pointer ${
-                  lang === 'en'
-                    ? 'bg-green-deep text-paper font-bold shadow-xs'
-                    : 'text-ink-muted hover:text-ink'
-                }`}
+                className={`px-2.5 py-1 rounded-full text-xs font-sans transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden cursor-pointer ${lang === 'en'
+                  ? 'bg-green-deep text-paper font-bold shadow-xs'
+                  : 'text-ink-muted hover:text-ink'
+                  }`}
                 title="Switch interface to English"
               >
                 EN
@@ -228,16 +228,41 @@ export function Header() {
                 role="radio"
                 aria-checked={lang === 'bn'}
                 onClick={() => setLang('bn')}
-                className={`px-2.5 py-1 rounded-full text-xs font-bangla transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden cursor-pointer ${
-                  lang === 'bn'
-                    ? 'bg-green-deep text-paper font-bold shadow-xs'
-                    : 'text-ink-muted hover:text-ink'
-                }`}
+                className={`px-2.5 py-1 rounded-full text-xs font-bangla transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brass focus-visible:outline-hidden cursor-pointer ${lang === 'bn'
+                  ? 'bg-green-deep text-paper font-bold shadow-xs'
+                  : 'text-ink-muted hover:text-ink'
+                  }`}
                 title="ইন্টারফেস বাংলায় পরিবর্তন করুন"
               >
                 বাং
               </button>
             </div>
+
+            {/* Sign in Option (Right side) */}
+            {user ? (
+              <button
+                type="button"
+                onClick={() => setSignInModalOpen(true)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-paper-dark/70 hover:bg-paper-dark text-ink font-sans text-xs font-semibold transition-all shadow-2xs hover:border-brass/60 cursor-pointer"
+                title={`Signed in as ${user.name} (${user.chamber})`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                <span className="max-w-[110px] truncate">{user.name.replace('Advocate ', 'Adv. ')}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSignInModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-paper hover:bg-paper-dark text-ink font-sans text-xs font-semibold transition-all shadow-2xs hover:border-brass/70 cursor-pointer"
+                title="Sign in to your chamber account"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                <span>{lang === 'bn' ? 'লগইন' : 'Sign in'}</span>
+              </button>
+            )}
 
             {/* Primary Filled Button: "Explore Nothi AI →" */}
             <Link
@@ -278,9 +303,8 @@ export function Header() {
             role="dialog"
             aria-modal="true"
             aria-label="Mobile Navigation"
-            className={`fixed inset-x-0 top-[60px] bottom-0 bg-paper text-ink z-50 p-6 flex flex-col justify-between overflow-y-auto border-t border-border shadow-2xl ${
-              reducedMotion ? '' : 'animate-in slide-in-from-top-4 duration-200'
-            }`}
+            className={`fixed inset-x-0 top-[60px] bottom-0 bg-paper text-ink z-50 p-6 flex flex-col justify-between overflow-y-auto border-t border-border shadow-2xl ${reducedMotion ? '' : 'animate-in slide-in-from-top-4 duration-200'
+              }`}
           >
             {/* Nav list */}
             <div className="space-y-6 pt-2">
@@ -292,9 +316,8 @@ export function Header() {
                       key={link.id}
                       href={link.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`text-lg font-heading font-medium transition-colors py-1 flex items-center justify-between border-b border-border/40 ${
-                        isActive ? 'text-green-deep font-bold' : 'text-ink-muted hover:text-ink'
-                      }`}
+                      className={`text-lg font-heading font-medium transition-colors py-1 flex items-center justify-between border-b border-border/40 ${isActive ? 'text-green-deep font-bold' : 'text-ink-muted hover:text-ink'
+                        }`}
                     >
                       <span>{lang === 'bn' ? link.labelBn : link.labelEn}</span>
                       {isActive && <span className="text-xs font-mono text-brass">Active</span>}
@@ -306,6 +329,17 @@ export function Header() {
 
             {/* Bottom Primary Button */}
             <div className="pt-6 border-t border-border space-y-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setSignInModalOpen(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-full border border-border bg-paper-dark text-ink font-sans text-xs font-semibold hover:bg-border transition-colors cursor-pointer"
+              >
+                <span>{user ? `Signed in as ${user.name}` : (lang === 'bn' ? 'চেম্বার লগইন (Sign in)' : 'Chamber Sign In')}</span>
+              </button>
+
               <Link
                 href="/chat"
                 onClick={() => setMobileMenuOpen(false)}
@@ -321,6 +355,12 @@ export function Header() {
           </div>
         )}
       </header>
+
+      {/* Chamber Sign In Modal */}
+      <SignInModal
+        isOpen={signInModalOpen}
+        onClose={() => setSignInModalOpen(false)}
+      />
     </>
   );
 }

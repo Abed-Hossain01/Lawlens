@@ -5,7 +5,7 @@ import { submitContact, ContactFormData } from '@/lib/contact';
 
 interface ContactModalProps {
   isOpen: boolean;
-  initialPlan: 'plus' | 'pro' | 'demo';
+  initialPlan: 'free' | 'basic' | 'plus' | 'pro' | 'demo';
   onClose: () => void;
 }
 

@@ -12,7 +12,7 @@ export interface PlanFeature {
 }
 
 export interface PlanConfig {
-  id: 'basic' | 'plus' | 'pro';
+  id: 'free' | 'basic' | 'pro';
   name: string;
   tagline: string;
   recommended?: boolean;
@@ -22,90 +22,87 @@ export interface PlanConfig {
   // TODO: set real price
   priceYearlyBdt: number | null;
   ctaText: string;
-  ctaType: 'audit' | 'request-access' | 'talk-to-us';
+  ctaType: 'free' | 'request-access' | 'talk-to-us';
   features: PlanFeature[];
 }
 
 export interface FeatureComparisonRow {
   category: string;
   feature: string;
+  free: string | boolean;
   basic: string | boolean;
-  plus: string | boolean;
   pro: string | boolean;
   planned?: boolean;
 }
 
 export const PLANS: PlanConfig[] = [
   {
+    id: 'free',
+    name: 'Free',
+    tagline: 'For independent advocates exploring statutory vetting',
+    recommended: false,
+    badge: 'Starter',
+    priceMonthlyBdt: 0,
+    priceYearlyBdt: 0,
+    ctaText: 'Start Free',
+    ctaType: 'free',
+    features: [
+      { text: 'Up to 5 document bundle audits per month', included: true },
+      { text: 'Saf Kabala deed, RS/BS Khatian & NID verification', included: true },
+      { text: 'Deterministic Red / Amber / Green statutory risk flags', included: true },
+      { text: 'Grounded Nothi AI chat (28 verified statutory sections)', included: true },
+      { text: 'Section 23 4-month presentation window calculation', included: true },
+      { text: 'Bilingual English & Bangla interface', included: true },
+      { text: 'Downloadable vetting memorandum (PDF/Print ready)', included: false },
+      { text: 'Persistent audit archive & case history', included: false },
+      { text: 'Multi-user advocate team seats & role provisioning', included: false },
+    ],
+  },
+  {
     id: 'basic',
     name: 'Basic',
-    tagline: 'For solo advocates and independent legal chambers',
-    recommended: false,
+    tagline: 'For solo advocates and growing legal chambers',
+    recommended: true,
+    badge: 'Most popular',
     // TODO: set real price
     priceMonthlyBdt: 2500,
     // TODO: set real price
     priceYearlyBdt: 24000,
-    ctaText: 'Start with Basic',
-    ctaType: 'audit',
-    features: [
-      { text: 'Up to 25 document audits per month', included: true },
-      { text: 'Triad bundle intake: Saf Kabala, RS/BS Khatian, NID', included: true },
-      { text: 'Deterministic Red / Amber / Green statutory risk flags', included: true },
-      { text: 'Cross-document entity comparison matrix', included: true },
-      { text: 'Citation inspector with laws_corpus.json verification', included: true },
-      { text: 'Pre-loaded benchmark packets (Packet A & Packet B)', included: true },
-      { text: 'Bilingual English & Bangla interface', included: true },
-      { text: 'Standard community support', included: true },
-      { text: 'Downloadable vetting memorandum (print / PDF)', included: false },
-      { text: 'Saved multi-case audit history', included: false },
-    ],
-  },
-  {
-    id: 'plus',
-    name: 'Plus',
-    tagline: 'For active law chambers and real-estate developers',
-    recommended: true,
-    badge: 'Most chosen',
-    // TODO: set real price
-    priceMonthlyBdt: 7500,
-    // TODO: set real price
-    priceYearlyBdt: 72000,
-    ctaText: 'Request access',
+    ctaText: 'Get Basic',
     ctaType: 'request-access',
     features: [
-      { text: 'Up to 150 document audits per month', included: true },
-      { text: 'Everything included in Basic', included: true },
+      { text: 'Up to 60 document bundle audits per month', included: true },
+      { text: 'Everything included in Free', included: true },
       { text: 'Official downloadable vetting memorandum (PDF/Print ready)', included: true },
+      { text: 'Lis Pendens litigation screening (TPA 1882 Sec. 52)', included: true },
+      { text: 'Land crime penal liability screening (LCPRA 2023 Sec. 4)', included: true },
       { text: 'Persistent audit archive & case history', included: true },
-      { text: 'Nothi AI statutory chat with higher daily allowance', included: true },
-      { text: 'Citation inspector deep drawer links', included: true },
       { text: 'Priority email & chat support within 4 hours', included: true },
-      { text: 'Custom audit volume & team seat provisioning', included: false },
-      { text: 'Enterprise compliance audit log export', included: false },
+      { text: 'Multi-user advocate team seats & role provisioning', included: false },
+      { text: 'Bank VAT/AIT invoices & institutional purchase orders', included: false },
     ],
   },
   {
     id: 'pro',
     name: 'Pro',
-    tagline: 'For commercial banks, financial institutions and large teams',
+    tagline: 'For commercial banks, financial institutions & syndicates',
     recommended: false,
+    badge: 'Enterprise',
     // TODO: set real price
-    priceMonthlyBdt: null, // Custom enterprise pricing
+    priceMonthlyBdt: 7500,
     // TODO: set real price
-    priceYearlyBdt: null,
-    ctaText: 'Talk to us',
+    priceYearlyBdt: 72000,
+    ctaText: 'Upgrade to Pro',
     ctaType: 'talk-to-us',
     features: [
-      { text: 'Unlimited or tailored monthly audit volume', included: true },
-      { text: 'Everything included in Plus', included: true },
-      { text: 'Multi-seat team licenses with role-based access', included: true },
-      { text: 'Full compliance audit trail & CSV/JSON export', included: true },
-      { text: 'Nothi AI chat with highest message throughput', included: true },
-      { text: 'Dedicated legal onboarding & workflow integration session', included: true },
-      { text: 'Custom SLA & 24/7 dedicated support representative', included: true },
-      { text: 'RJSC Company registry mortgage charge pack', included: false, planned: true },
-      { text: 'NBR Tax clearance & revenue verification module', included: false, planned: true },
-      { text: 'Secure API Webhooks & Core Banking integration', included: false, planned: true },
+      { text: 'Unlimited monthly document audit volume', included: true },
+      { text: 'Everything included in Basic', included: true },
+      { text: 'Priority multimodal OCR extraction queue', included: true },
+      { text: 'Multi-user advocate team seats & role provisioning', included: true },
+      { text: 'Formal bank VAT/AIT invoices & institutional purchase orders', included: true },
+      { text: 'Dedicated compliance account manager & SLA guarantee', included: true },
+      { text: 'REST API webhooks for core banking systems (Planned)', included: true, planned: true },
+      { text: 'Custom RJSC & NBR verification modules (Planned)', included: true, planned: true },
     ],
   },
 ];

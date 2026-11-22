@@ -21,6 +21,8 @@ import { StreamingTextRenderer } from '@/components/chat/StreamingTextRenderer';
 import { VoiceInputButton } from '@/components/chat/VoiceInputButton';
 import { ChatSessionMenu } from '@/components/chat/ChatSessionMenu';
 import { DrawerDetailModal } from '@/components/landing/citation-gate/DrawerDetailModal';
+import { useAuth } from '@/lib/auth';
+import { SignInModal } from '@/components/auth/SignInModal';
 import { sendChatMessage, ChatMessage, ChatAttachment, ChatCitation } from '@/lib/chat';
 import type { CorpusSection } from '@/types';
 
@@ -48,18 +50,34 @@ const getServerSnapshot = () => false;
 
 const EMPTY_SUGGESTIONS = [
   {
+    tag: 'Registration Act 1908 (Sec. 23)',
+    icon: '📜',
+    titleEn: '4-Month Registration Window',
+    titleBn: 'রেজিস্ট্রেশনের ৪ মাসের সময়সীমা',
     textEn: 'How long can pass between signing and registering a Saf Kabala deed?',
     textBn: 'সাফ কবলা দলিল সম্পাদনের পর কতদিনের মধ্যে তা রেজিস্ট্রি করতে হবে?',
   },
   {
+    tag: 'NID Rules 2010 (Rule 3)',
+    icon: '🪪',
+    titleEn: 'National ID Smart Card',
+    titleBn: 'স্মার্ট এনআইডি কার্ডের বৈধতা',
     textEn: 'What makes an NID number valid under Rule 3?',
     textBn: 'এনআইডি বিধিমালা ২০১০ এর বিধি ৩ অনুসারে কোন পরিচয়পত্র বৈধ?',
   },
   {
-    textEn: 'What does a Dag number mismatch mean?',
+    tag: 'Transfer of Property Act (Sec. 52)',
+    icon: '⚖️',
+    titleEn: 'Lis Pendens & Dag Matching',
+    titleBn: 'মামলাধীন স্বত্ব ও দাগ গরমিল',
+    textEn: 'What does a Dag number mismatch between deed and khatian mean?',
     textBn: 'দলিল ও খতিয়ানের দাগ নম্বরের গরমিলের আইনি ফলাফল কী?',
   },
   {
+    tag: 'SAT Act 1950 (Chain of Title)',
+    icon: '📑',
+    titleEn: 'Khatian Record of Rights',
+    titleBn: 'খতিয়ানের স্বত্বলিপি ও নামজারি',
     textEn: 'What is a Khatian used for in property conveyance?',
     textBn: 'সম্পত্তি হস্তান্তরে খতিয়ান (স্বত্বলিপির) মূল ভূমিকা কী?',
   },
@@ -67,6 +85,8 @@ const EMPTY_SUGGESTIONS = [
 
 export default function ChatPage() {
   const { lang, setLang } = useLang();
+  const { user } = useAuth();
+  const [signInModalOpen, setSignInModalOpen] = useState(false);
 
   // Sessions & Active Chat State
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -111,10 +131,18 @@ export default function ChatPage() {
         const stored = localStorage.getItem(STORAGE_SESSIONS_KEY);
         let parsedSessions: ChatSession[] = [];
         if (stored) {
-          parsedSessions = JSON.parse(stored);
+          try {
+            parsedSessions = JSON.parse(stored);
+          } catch {
+            parsedSessions = [];
+          }
         }
 
-        if (!parsedSessions || parsedSessions.length === 0) {
+        // Prune empty duplicate sessions from storage so the sidebar stays clean
+        const withMessages = (parsedSessions || []).filter((s) => s.messages && s.messages.length > 0);
+        if (withMessages.length > 0) {
+          parsedSessions = withMessages;
+        } else {
           const initialSession: ChatSession = {
             id: makeId('session'),
             title: lang === 'bn' ? 'দলিল পরীক্ষণ' : 'Property Record Check',
@@ -122,8 +150,8 @@ export default function ChatPage() {
             messages: [],
           };
           parsedSessions = [initialSession];
-          localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(parsedSessions));
         }
+        localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(parsedSessions));
 
         setSessions(parsedSessions);
 
@@ -189,13 +217,30 @@ export default function ChatPage() {
 
   // ── 2. NEW CHAT & SESSION MANAGEMENT ──────────────────────────
   const handleNewChat = () => {
+    // If active session is already empty (no messages yet), just refocus
+    if (activeSession && activeSession.messages.length === 0) {
+      setInputText('');
+      setAttachments([]);
+      setAttachmentError(null);
+      setIsThinking(false);
+      setIsStreaming(false);
+      setStreamingText('');
+      setLogoState('idle');
+      if (window.innerWidth < 768) setSidebarOpen(false);
+      textareaRef.current?.focus();
+      return;
+    }
+
+    // Prune existing sessions that are empty to avoid clutter
+    const nonEmptySessions = sessions.filter((s) => s.messages.length > 0);
+
     const newSession: ChatSession = {
       id: makeId('session'),
       title: lang === 'bn' ? 'নতুন দলিল পরীক্ষণ' : 'New Property Examination',
       createdAt: nowTimestamp(),
       messages: [],
     };
-    const updated = [newSession, ...sessions];
+    const updated = [newSession, ...nonEmptySessions];
     persistSessions(updated, newSession.id);
     setActiveSessionId(newSession.id);
     setInputText('');
@@ -206,6 +251,7 @@ export default function ChatPage() {
     setStreamingText('');
     setLogoState('idle');
     if (window.innerWidth < 768) setSidebarOpen(false);
+    textareaRef.current?.focus();
   };
 
   const handleSelectSession = (id: string) => {
@@ -626,12 +672,38 @@ export default function ChatPage() {
           <button
             type="button"
             onClick={handleNewChat}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs bg-paper border border-border hover:bg-paper-dark text-xs font-sans font-medium text-ink transition-colors cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-paper border border-border hover:bg-paper-dark text-xs font-sans font-medium text-ink transition-colors cursor-pointer"
             title="Start a new chat"
           >
             <span>+</span>
             <span>{lang === 'bn' ? 'নতুন' : 'New chat'}</span>
           </button>
+
+          {/* Sign In Option (Right Side) */}
+          {user ? (
+            <button
+              type="button"
+              onClick={() => setSignInModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-paper hover:bg-paper-dark text-xs font-sans font-semibold text-ink shadow-2xs hover:border-brass/70 transition-all cursor-pointer"
+              title={`Signed in as ${user.name} (${user.chamber})`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+              <span className="max-w-[100px] sm:max-w-[130px] truncate">{user.name.replace('Advocate ', 'Adv. ')}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSignInModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-green-deep text-paper hover:bg-green-mid text-xs font-sans font-semibold shadow-xs hover:shadow-sm transition-all cursor-pointer"
+              title="Sign in with Chamber or Bar Council ID"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>{lang === 'bn' ? 'লগইন' : 'Sign in'}</span>
+            </button>
+          )}
 
           {/* Exit / Home link */}
           <Link
@@ -667,9 +739,9 @@ export default function ChatPage() {
               <button
                 type="button"
                 onClick={handleNewChat}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xs bg-paper-dark hover:bg-border text-ink font-sans text-xs font-semibold transition-all border border-border shadow-2xs cursor-pointer active:scale-98"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-green-deep hover:bg-green-mid text-paper font-sans text-xs font-semibold transition-all shadow-xs cursor-pointer active:scale-98"
               >
-                <span className="text-base leading-none font-bold text-green-deep">+</span>
+                <span className="text-base leading-none font-bold">+</span>
                 <span>{lang === 'bn' ? 'নতুন পরীক্ষণ শুরু করুন' : 'New Examination'}</span>
               </button>
             </div>
@@ -689,13 +761,29 @@ export default function ChatPage() {
                       <div
                         key={session.id}
                         onClick={() => handleSelectSession(session.id)}
-                        className={`group relative flex items-center justify-between px-3 py-2 rounded-xs text-xs font-sans transition-all cursor-pointer ${
+                        className={`group relative flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-sans transition-all cursor-pointer ${
                           isActive
-                            ? 'bg-paper-dark border-l-2 border-green-deep text-green-deep font-semibold shadow-2xs'
+                            ? 'bg-paper-dark border-l-3 border-green-deep text-green-deep font-semibold shadow-2xs'
                             : 'text-ink hover:bg-paper-light'
                         }`}
                       >
-                        <span className="truncate pr-2">{session.title}</span>
+                        <div className="flex items-center gap-2 truncate pr-2">
+                          <svg
+                            width="13"
+                            height="13"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className={`shrink-0 ${isActive ? 'text-green-deep' : 'text-ink-muted/70'}`}
+                          >
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                            <path d="M14 2v6h6" />
+                            <path d="M16 13H8" />
+                            <path d="M16 17H8" />
+                          </svg>
+                          <span className="truncate">{session.title}</span>
+                        </div>
 
                         {/* Three dots menu */}
                         <ChatSessionMenu
@@ -711,12 +799,40 @@ export default function ChatPage() {
               ))}
             </div>
 
-            {/* Sidebar Safe Footer (Never Covered by Overlays) */}
-            <div className="p-4 border-t border-border bg-paper-light space-y-2 pb-8 sm:pb-5">
+            {/* Sidebar Safe Footer (With Chamber Sign In / Profile) */}
+            <div className="p-3.5 border-t border-border bg-paper-light space-y-2.5 pb-8 sm:pb-5">
+              {/* User Account / Sign In Pill */}
+              {user ? (
+                <div
+                  onClick={() => setSignInModalOpen(true)}
+                  className="p-2 rounded-xl bg-paper border border-border hover:border-brass/70 transition-all flex items-center justify-between cursor-pointer shadow-2xs"
+                >
+                  <div className="truncate pr-2">
+                    <div className="text-xs font-bold text-ink truncate">{user.name}</div>
+                    <div className="text-[10px] text-ink-muted truncate font-mono">{user.chamber}</div>
+                  </div>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-brass/20 text-ink font-bold font-mono uppercase">
+                    {user.plan}
+                  </span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSignInModalOpen(true)}
+                  className="w-full py-2 px-3 rounded-xl border border-border bg-paper hover:bg-paper-dark text-xs font-sans font-semibold text-ink transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                  <span>Chamber Sign In</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => setCorpusListOpen(true)}
-                className="w-full flex items-center justify-between text-xs font-sans text-ink-muted hover:text-green-deep transition-colors"
+                className="w-full flex items-center justify-between text-xs font-sans text-ink-muted hover:text-green-deep transition-colors pt-1"
               >
                 <span>28 sections verified</span>
                 <span className="font-mono text-[10px]">laws_corpus.json</span>
@@ -741,24 +857,43 @@ export default function ChatPage() {
           aria-live="polite"
         >
           <div className="flex-1 flex flex-col justify-between max-w-[760px] mx-auto w-full px-4 sm:px-6 py-8">
-            {/* ── EMPTY STATE (CALM, CLEAN, NO CLIPART) ── */}
+            {/* ── EMPTY STATE (CREATIVE, MODERN, SLEEK) ── */}
             {messages.length === 0 && !isThinking && !isStreaming ? (
-              <div className="my-auto py-8 space-y-8 animate-in fade-in duration-200">
-                {/* Short Greeting & Scope */}
-                <div className="space-y-2">
-                  <h1 className="font-heading text-3xl sm:text-4xl font-bold text-green-deep tracking-tight">
-                    {lang === 'bn' ? 'আপনি কি যাচাই করতে চান?' : 'What would you like to check?'}
+              <div className="my-auto py-6 sm:py-8 space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+                {/* Modern Pill Badge */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-paper border border-brass/40 shadow-2xs text-xs font-mono font-bold text-ink w-fit">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                    <span className="text-green-deep">Deterministic Legal Intelligence</span>
+                    <span className="text-brass font-normal">• 28 Verified Sections</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setCorpusListOpen(true)}
+                    className="text-xs font-mono text-ink-muted hover:text-green-deep transition-colors w-fit flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View Act Index</span>
+                    <span>→</span>
+                  </button>
+                </div>
+
+                {/* Main Hero Question */}
+                <div className="space-y-2.5">
+                  <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-extrabold text-green-deep tracking-tight leading-[1.15]">
+                    {lang === 'bn' ? 'কী আইনি তথ্য যাচাই করতে চান?' : 'What would you like to verify today?'}
                   </h1>
-                  <p className="font-sans text-sm sm:text-base text-ink-muted leading-relaxed">
+                  <p className="font-sans text-sm sm:text-base text-ink-muted leading-relaxed max-w-xl">
                     {lang === 'bn'
-                      ? 'উত্তরসমূহ কেবল বাংলাদেশের সম্পত্তি আইনের ২৮টি যাচাইকৃত ধারা থেকে প্রদান করা হয়।'
-                      : 'Answers come only from 28 verified sections of Bangladeshi property law.'}
+                      ? 'সাফ কবলা দলিল, আরএস/বিএস খতিয়ান ও এনআইডি রেকর্ড পরীক্ষণ। শূন্য এআই বিভ্রান্তি—প্রতিটি উত্তর ২৮টি সংবিধিবদ্ধ আইনি ধারার ভিত্তিতে সুনির্দিষ্ট।'
+                      : 'Deterministic cross-parity examination for property deeds, collectorate khatians, and identity smart cards. Zero AI hallucination guaranteed.'}
                   </p>
                 </div>
 
-                {/* Compact Text Suggestions with Thin Divider */}
-                <div className="border-t border-border divide-y divide-border">
+                {/* 2x2 Interactive Modern Suggestion Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
                   {EMPTY_SUGGESTIONS.map((sug, i) => {
+                    const title = lang === 'bn' ? sug.titleBn : sug.titleEn;
                     const text = lang === 'bn' ? sug.textBn : sug.textEn;
 
                     return (
@@ -766,15 +901,58 @@ export default function ChatPage() {
                         key={i}
                         type="button"
                         onClick={() => handleSendMessage(text)}
-                        className="group w-full py-3.5 flex items-center justify-between text-left font-sans text-sm text-ink hover:text-green-deep transition-colors cursor-pointer"
+                        className="group text-left p-4 sm:p-5 rounded-2xl bg-paper border border-border/80 hover:border-brass/70 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative flex flex-col justify-between cursor-pointer overflow-hidden shadow-2xs"
                       >
-                        <span className="pr-4">{text}</span>
-                        <span className="text-ink-muted group-hover:text-brass group-hover:translate-x-1 transition-all shrink-0">
-                          →
-                        </span>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-green-deep px-2 py-0.5 rounded-full bg-paper-dark border border-border">
+                              <span>{sug.icon}</span>
+                              <span className="truncate max-w-[190px]">{sug.tag}</span>
+                            </span>
+                            <span className="text-ink-muted/50 group-hover:text-brass group-hover:translate-x-1 group-hover:-translate-y-0.5 transition-all text-sm font-bold">
+                              ↗
+                            </span>
+                          </div>
+
+                          <h3 className="font-heading text-sm sm:text-base font-bold text-ink group-hover:text-green-deep transition-colors">
+                            {title}
+                          </h3>
+
+                          <p className="font-sans text-xs text-ink-muted leading-relaxed">
+                            {text}
+                          </p>
+                        </div>
+
+                        <div className="pt-3 text-[10px] font-mono text-brass font-bold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span>Ask Nothi AI</span>
+                          <span>→</span>
+                        </div>
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Quick Document Upload Callout Banner */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-3.5 rounded-2xl border border-dashed border-border/90 hover:border-brass bg-paper-dark/30 hover:bg-paper-dark/60 transition-all flex items-center justify-between cursor-pointer group shadow-2xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-9 h-9 rounded-xl bg-green-deep/10 text-green-deep flex items-center justify-center text-base font-bold group-hover:scale-110 transition-transform">
+                      📂
+                    </span>
+                    <div>
+                      <span className="text-xs font-semibold text-ink group-hover:text-green-deep transition-colors">
+                        {lang === 'bn' ? 'দলিল বা খতিয়ান ফাইল আপলোড করুন' : 'Drop or attach property records'}
+                      </span>
+                      <p className="text-[11px] text-ink-muted font-sans">
+                        Saf Kabala deeds, RS/BS Khatians, or NID smart cards (PDF, JPG, PNG up to 15 MB)
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-green-deep px-3 py-1 rounded-full bg-paper border border-border group-hover:border-brass transition-colors shrink-0">
+                    Upload &rarr;
+                  </span>
                 </div>
               </div>
             ) : (
@@ -983,8 +1161,43 @@ export default function ChatPage() {
             )}
 
             {/* ── 3. DOCKED BOTTOM INPUT BAR ── */}
-            <div className="pt-4 sticky bottom-0 bg-[#fbf9f5]/95 backdrop-blur-xs pb-4">
-              <div className="rounded-2xl bg-paper border border-border shadow-xs focus-within:border-brass/80 focus-within:shadow-md transition-all p-3 space-y-2">
+            <div className="pt-4 sticky bottom-0 bg-[#fbf9f5]/95 backdrop-blur-md pb-4 z-10">
+              {/* Quick Topic Chips (Visible when actively chatting) */}
+              {messages.length > 0 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 text-[11px] font-mono no-scrollbar">
+                  <span className="text-ink-muted shrink-0 text-[10px] font-bold">Quick add:</span>
+                  <button
+                    type="button"
+                    onClick={() => setInputText('How does Section 23 calculate the 4-month deed registration window?')}
+                    className="px-2.5 py-1 rounded-full bg-paper hover:bg-paper-dark border border-border text-ink whitespace-nowrap transition-colors cursor-pointer shadow-2xs hover:border-brass/60"
+                  >
+                    + Sec. 23 Window
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputText('Check Lis Pendens suit risk under TPA Section 52')}
+                    className="px-2.5 py-1 rounded-full bg-paper hover:bg-paper-dark border border-border text-ink whitespace-nowrap transition-colors cursor-pointer shadow-2xs hover:border-brass/60"
+                  >
+                    + Lis Pendens Sec. 52
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputText('What is the valid Smart NID format under Rule 3?')}
+                    className="px-2.5 py-1 rounded-full bg-paper hover:bg-paper-dark border border-border text-ink whitespace-nowrap transition-colors cursor-pointer shadow-2xs hover:border-brass/60"
+                  >
+                    + Rule 3 Smart NID
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputText('Explain how Dag number mismatch affects title clearance')}
+                    className="px-2.5 py-1 rounded-full bg-paper hover:bg-paper-dark border border-border text-ink whitespace-nowrap transition-colors cursor-pointer shadow-2xs hover:border-brass/60"
+                  >
+                    + Dag Mismatch
+                  </button>
+                </div>
+              )}
+
+              <div className="rounded-2xl bg-paper border border-border/80 shadow-md focus-within:border-brass focus-within:ring-4 focus-within:ring-brass/10 focus-within:shadow-xl transition-all p-3 space-y-2">
                 {/* Upload Error Banner */}
                 {attachmentError && (
                   <div className="px-3 py-1.5 rounded-xs bg-vermillion/10 border border-vermillion/30 text-vermillion text-xs font-sans flex items-center justify-between">
@@ -1179,6 +1392,11 @@ export default function ChatPage() {
           </div>
         </div>
       )}
+      {/* ── 7. CHAMBER SIGN IN MODAL ── */}
+      <SignInModal
+        isOpen={signInModalOpen}
+        onClose={() => setSignInModalOpen(false)}
+      />
     </div>
   );
 }

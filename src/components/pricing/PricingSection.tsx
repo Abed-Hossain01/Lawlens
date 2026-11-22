@@ -9,10 +9,10 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
   const [isYearly, setIsYearly] = useState(false);
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
-    plan: 'plus' | 'pro' | 'demo';
+    plan: 'free' | 'basic' | 'pro' | 'demo';
   }>({
     isOpen: false,
-    plan: 'plus',
+    plan: 'basic',
   });
 
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
@@ -88,7 +88,7 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
           </div>
         </div>
 
-        {/* ── 3 PRICING CARDS (CLEAR HIERARCHY) ── */}
+        {/* ── 3 PRICING CARDS (FREE, BASIC, PRO) ── */}
         <div className="mt-14 grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
           {PLANS.map((plan: PlanConfig) => {
             const isRec = plan.recommended;
@@ -97,41 +97,59 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
             return (
               <div
                 key={plan.id}
-                className={`relative rounded-sm transition-all duration-200 flex flex-col justify-between ${
+                className={`relative rounded-2xl transition-all duration-300 flex flex-col justify-between group ${
                   isRec
-                    ? 'bg-green-deep text-paper shadow-2xl border-2 border-brass lg:-translate-y-3 z-10 p-7 sm:p-8'
-                    : 'bg-paper text-ink shadow-md border-2 border-border p-6 sm:p-7'
+                    ? 'bg-gradient-to-b from-green-deep to-[#143427] text-paper shadow-xl hover:shadow-2xl border-2 border-brass/90 ring-4 ring-brass/10 lg:-translate-y-3 z-10 p-7 sm:p-8'
+                    : 'bg-paper text-ink shadow-sm hover:shadow-xl border border-border/80 hover:border-brass/40 p-6 sm:p-7'
                 }`}
               >
-                {/* "Most chosen" Pill */}
-                {isRec && plan.badge && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-brass text-ink font-mono text-[10px] font-black uppercase tracking-widest shadow-md">
+                {/* Badge (Most popular / Starter / Enterprise) */}
+                {plan.badge && (
+                  <div
+                    className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full font-mono text-[10px] font-black uppercase tracking-widest shadow-md transition-transform duration-200 group-hover:scale-105 ${
+                      isRec
+                        ? 'bg-brass text-ink border border-brass-light'
+                        : 'bg-paper-dark text-ink border border-border'
+                    }`}
+                  >
                     {plan.badge}
                   </div>
                 )}
 
-                <div className="space-y-5">
+                <div className="space-y-6">
                   {/* Plan Name & Tagline */}
                   <div>
-                    <h3 className={`font-heading text-2xl font-bold ${isRec ? 'text-paper' : 'text-green-deep'}`}>
+                    <h3 className={`font-heading text-2xl sm:text-3xl font-bold tracking-tight ${isRec ? 'text-paper' : 'text-green-deep'}`}>
                       {plan.name}
                     </h3>
-                    <p className={`text-xs mt-1.5 font-sans leading-relaxed ${isRec ? 'text-paper-dark' : 'text-ink-muted'}`}>
+                    <p className={`text-xs mt-2 font-sans leading-relaxed ${isRec ? 'text-paper-dark/90' : 'text-ink-muted'}`}>
                       {plan.tagline}
                     </p>
                   </div>
 
                   {/* Pricing Display */}
-                  <div className="pt-2 border-t border-current/15">
+                  <div className="pt-3 border-t border-current/15">
                     {price !== null ? (
-                      <div className="flex items-baseline gap-1">
-                        <span className="font-mono text-xs opacity-75">BDT</span>
-                        <span className="font-mono text-3xl sm:text-4xl font-bold tracking-tight">
-                          ৳{price.toLocaleString()}
-                        </span>
-                        <span className="text-xs font-mono opacity-70">
-                          {isYearly ? '/ yr' : '/ mo'}
-                        </span>
+                      <div>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-mono text-xs opacity-75">BDT</span>
+                          <span className="font-mono text-3xl sm:text-4xl font-extrabold tracking-tight">
+                            ৳{price.toLocaleString()}
+                          </span>
+                          <span className="text-xs font-mono opacity-70">
+                            {isYearly ? '/ yr' : '/ mo'}
+                          </span>
+                        </div>
+                        {isYearly && price > 0 && (
+                          <div className={`text-[11px] font-mono mt-1 ${isRec ? 'text-brass-light' : 'text-green-deep'}`}>
+                            ৳{Math.round(price / 12).toLocaleString()}/mo billed annually
+                          </div>
+                        )}
+                        {price === 0 && (
+                          <div className={`text-[11px] font-mono mt-1 ${isRec ? 'text-paper-dark' : 'text-ink-muted'}`}>
+                            Free forever • No credit card needed
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-baseline gap-2">
@@ -142,11 +160,11 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
                   </div>
 
                   {/* Feature Inclusions List */}
-                  <div className="pt-4 space-y-2.5">
+                  <div className="pt-2 space-y-3">
                     <span className="text-[10px] font-mono uppercase tracking-wider opacity-75 font-bold block">
                       Included Capabilities:
                     </span>
-                    <ul className="space-y-2 text-xs font-sans">
+                    <ul className="space-y-2.5 text-xs font-sans">
                       {plan.features.map((feat, fIdx) => (
                         <li key={fIdx} className="flex items-start gap-2.5">
                           {feat.included ? (
@@ -172,10 +190,10 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
 
                 {/* Primary Button */}
                 <div className="pt-8">
-                  {plan.ctaType === 'audit' ? (
+                  {plan.ctaType === 'free' ? (
                     <Link
                       href="/chat"
-                      className="w-full py-3 rounded-xs bg-paper-dark hover:bg-border text-ink font-sans text-xs font-bold uppercase tracking-wider text-center block transition-colors border border-border shadow-xs cursor-pointer"
+                      className="w-full py-3.5 rounded-xl bg-paper-dark hover:bg-border text-ink font-sans text-xs font-bold uppercase tracking-wider text-center block transition-all border border-border shadow-2xs hover:shadow-md active:scale-98 cursor-pointer"
                     >
                       {plan.ctaText} &rarr;
                     </Link>
@@ -185,12 +203,12 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
                       onClick={() =>
                         setModalState({
                           isOpen: true,
-                          plan: plan.id as 'plus' | 'pro',
+                          plan: plan.id as 'basic' | 'pro',
                         })
                       }
-                      className={`w-full py-3 rounded-xs font-sans text-xs font-bold uppercase tracking-wider text-center block transition-all shadow-md active:scale-95 cursor-pointer ${
+                      className={`w-full py-3.5 rounded-xl font-sans text-xs font-bold uppercase tracking-wider text-center block transition-all shadow-md hover:shadow-xl active:scale-98 cursor-pointer ${
                         isRec
-                          ? 'bg-brass text-ink hover:bg-brass-light'
+                          ? 'bg-brass text-ink hover:bg-brass-light font-black hover:brightness-105'
                           : 'bg-green-deep text-paper hover:bg-green-mid'
                       }`}
                     >

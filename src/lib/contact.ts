@@ -2,7 +2,7 @@ export interface ContactFormData {
   name: string;
   organization: string;
   email: string;
-  plan: 'basic' | 'plus' | 'pro' | 'demo';
+  plan: 'free' | 'basic' | 'plus' | 'pro' | 'demo';
   message?: string;
 }
 
