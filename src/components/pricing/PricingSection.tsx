@@ -97,18 +97,18 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
             return (
               <div
                 key={plan.id}
-                className={`relative rounded-2xl transition-all duration-300 flex flex-col justify-between group ${
+                className={`relative rounded-3xl transition-all duration-300 flex flex-col justify-between group ${
                   isRec
-                    ? 'bg-gradient-to-b from-green-deep to-[#143427] text-paper shadow-xl hover:shadow-2xl border-2 border-brass/90 ring-4 ring-brass/10 lg:-translate-y-3 z-10 p-7 sm:p-8'
-                    : 'bg-paper text-ink shadow-sm hover:shadow-xl border border-border/80 hover:border-brass/40 p-6 sm:p-7'
+                    ? 'bg-gradient-to-b from-[#1b4332] to-[#122e22] text-paper shadow-2xl hover:shadow-[0_20px_50px_rgba(27,67,50,0.3)] border-2 border-brass/90 ring-4 ring-brass/15 lg:-translate-y-3 z-10 p-7 sm:p-8'
+                    : 'bg-paper text-ink shadow-sm hover:shadow-xl border border-border/80 hover:border-brass/50 p-6 sm:p-7 hover:-translate-y-1'
                 }`}
               >
                 {/* Badge (Most popular / Starter / Enterprise) */}
                 {plan.badge && (
                   <div
-                    className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full font-mono text-[10px] font-black uppercase tracking-widest shadow-md transition-transform duration-200 group-hover:scale-105 ${
+                    className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full font-mono text-[10px] font-black uppercase tracking-widest shadow-md transition-all duration-300 group-hover:scale-105 ${
                       isRec
-                        ? 'bg-brass text-ink border border-brass-light'
+                        ? 'bg-brass text-ink border border-brass-light shadow-brass/30'
                         : 'bg-paper-dark text-ink border border-border'
                     }`}
                   >
@@ -130,7 +130,7 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
                   {/* Pricing Display */}
                   <div className="pt-3 border-t border-current/15">
                     {price !== null ? (
-                      <div>
+                      <div className="transition-all duration-300">
                         <div className="flex items-baseline gap-1.5">
                           <span className="font-mono text-xs opacity-75">BDT</span>
                           <span className="font-mono text-3xl sm:text-4xl font-extrabold tracking-tight">
@@ -159,29 +159,18 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
                     )}
                   </div>
 
-                  {/* Feature Inclusions List */}
+                  {/* Clean Positive Capabilities List */}
                   <div className="pt-2 space-y-3">
                     <span className="text-[10px] font-mono uppercase tracking-wider opacity-75 font-bold block">
                       Included Capabilities:
                     </span>
-                    <ul className="space-y-2.5 text-xs font-sans">
+                    <ul className="space-y-3 text-xs sm:text-[13px] font-sans">
                       {plan.features.map((feat, fIdx) => (
-                        <li key={fIdx} className="flex items-start gap-2.5">
-                          {feat.included ? (
-                            <span className={`shrink-0 font-bold ${isRec ? 'text-brass-light' : 'text-green-deep'}`}>
-                              ✓
-                            </span>
-                          ) : feat.planned ? (
-                            <span className="shrink-0 px-1 py-0.2 rounded-2xs bg-brass/25 text-brass-light font-mono text-[9px] font-bold">
-                              Planned
-                            </span>
-                          ) : (
-                            <span className="shrink-0 opacity-30 text-ink-muted">✕</span>
-                          )}
-
-                          <span className={feat.included ? '' : feat.planned ? 'opacity-85 italic' : 'opacity-40 line-through'}>
-                            {feat.text}
+                        <li key={fIdx} className="flex items-start gap-2.5 leading-snug">
+                          <span className={`shrink-0 font-bold text-sm ${isRec ? 'text-brass-light' : 'text-green-deep'}`}>
+                            ✓
                           </span>
+                          <span>{feat.text}</span>
                         </li>
                       ))}
                     </ul>
@@ -193,7 +182,7 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
                   {plan.ctaType === 'free' ? (
                     <Link
                       href="/chat"
-                      className="w-full py-3.5 rounded-xl bg-paper-dark hover:bg-border text-ink font-sans text-xs font-bold uppercase tracking-wider text-center block transition-all border border-border shadow-2xs hover:shadow-md active:scale-98 cursor-pointer"
+                      className="w-full py-3.5 rounded-2xl bg-paper-dark hover:bg-border text-ink font-sans text-xs font-bold uppercase tracking-wider text-center block transition-all border border-border shadow-2xs hover:shadow-md active:scale-98 cursor-pointer"
                     >
                       {plan.ctaText} &rarr;
                     </Link>
@@ -206,7 +195,7 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
                           plan: plan.id as 'basic' | 'pro',
                         })
                       }
-                      className={`w-full py-3.5 rounded-xl font-sans text-xs font-bold uppercase tracking-wider text-center block transition-all shadow-md hover:shadow-xl active:scale-98 cursor-pointer ${
+                      className={`w-full py-3.5 rounded-2xl font-sans text-xs font-bold uppercase tracking-wider text-center block transition-all shadow-md hover:shadow-xl active:scale-98 cursor-pointer ${
                         isRec
                           ? 'bg-brass text-ink hover:bg-brass-light font-black hover:brightness-105'
                           : 'bg-green-deep text-paper hover:bg-green-mid'
@@ -240,7 +229,7 @@ export function PricingSection({ showFaq = true }: { showFaq?: boolean }) {
                 return (
                   <div
                     key={fIdx}
-                    className="rounded-sm border border-border bg-paper shadow-2xs overflow-hidden transition-all"
+                    className="rounded-2xl border border-border bg-paper shadow-2xs overflow-hidden transition-all"
                   >
                     <button
                       type="button"

@@ -85,7 +85,7 @@ const EMPTY_SUGGESTIONS = [
 
 export default function ChatPage() {
   const { lang, setLang } = useLang();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [signInModalOpen, setSignInModalOpen] = useState(false);
 
   // Sessions & Active Chat State
@@ -679,23 +679,33 @@ export default function ChatPage() {
             <span>{lang === 'bn' ? 'নতুন' : 'New chat'}</span>
           </button>
 
-          {/* Sign In Option (Right Side) */}
+          {/* Sign In / Sign Out Option (Right Side) */}
           {user ? (
-            <button
-              type="button"
-              onClick={() => setSignInModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-paper hover:bg-paper-dark text-xs font-sans font-semibold text-ink shadow-2xs hover:border-brass/70 transition-all cursor-pointer"
-              title={`Signed in as ${user.name} (${user.chamber})`}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-              <span className="max-w-[100px] sm:max-w-[130px] truncate">{user.name.replace('Advocate ', 'Adv. ')}</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSignInModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-paper hover:bg-paper-dark text-xs font-sans font-semibold text-ink shadow-2xs hover:border-brass/70 transition-all cursor-pointer"
+                title={`Signed in as ${user.name}`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                <span className="max-w-[85px] sm:max-w-[130px] truncate">{user.name.replace('Advocate ', 'Adv. ')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => signOut()}
+                className="text-xs font-sans font-medium text-ink-muted hover:text-vermillion px-2 py-1 rounded-full hover:bg-paper-dark transition-colors cursor-pointer"
+                title="Sign out"
+              >
+                {lang === 'bn' ? 'লগআউট' : 'Sign out'}
+              </button>
+            </div>
           ) : (
             <button
               type="button"
               onClick={() => setSignInModalOpen(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-green-deep text-paper hover:bg-green-mid text-xs font-sans font-semibold shadow-xs hover:shadow-sm transition-all cursor-pointer"
-              title="Sign in with Chamber or Bar Council ID"
+              title="Sign in with your email"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
@@ -799,33 +809,44 @@ export default function ChatPage() {
               ))}
             </div>
 
-            {/* Sidebar Safe Footer (With Chamber Sign In / Profile) */}
+            {/* Sidebar Safe Footer (With Sign In / Profile) */}
             <div className="p-3.5 border-t border-border bg-paper-light space-y-2.5 pb-8 sm:pb-5">
               {/* User Account / Sign In Pill */}
               {user ? (
-                <div
-                  onClick={() => setSignInModalOpen(true)}
-                  className="p-2 rounded-xl bg-paper border border-border hover:border-brass/70 transition-all flex items-center justify-between cursor-pointer shadow-2xs"
-                >
-                  <div className="truncate pr-2">
-                    <div className="text-xs font-bold text-ink truncate">{user.name}</div>
-                    <div className="text-[10px] text-ink-muted truncate font-mono">{user.chamber}</div>
+                <div className="p-3 rounded-2xl bg-paper border border-border space-y-2 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono uppercase text-green-deep font-bold flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                      Active Session
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => signOut()}
+                      className="text-[11px] font-sans font-medium text-ink-muted hover:text-vermillion cursor-pointer transition-colors"
+                      title="Sign out"
+                    >
+                      Sign Out
+                    </button>
                   </div>
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-brass/20 text-ink font-bold font-mono uppercase">
-                    {user.plan}
-                  </span>
+                  <div
+                    onClick={() => setSignInModalOpen(true)}
+                    className="truncate cursor-pointer hover:opacity-80 transition-opacity"
+                  >
+                    <div className="text-xs font-bold text-ink truncate">{user.name}</div>
+                    <div className="text-[10px] text-ink-muted truncate font-mono">{user.email}</div>
+                  </div>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => setSignInModalOpen(true)}
-                  className="w-full py-2 px-3 rounded-xl border border-border bg-paper hover:bg-paper-dark text-xs font-sans font-semibold text-ink transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                  className="w-full py-2.5 px-3 rounded-xl border border-border bg-paper hover:bg-paper-dark text-xs font-sans font-semibold text-ink transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
-                  <span>Chamber Sign In</span>
+                  <span>Sign In / Login</span>
                 </button>
               )}
 
@@ -888,6 +909,49 @@ export default function ChatPage() {
                       ? 'সাফ কবলা দলিল, আরএস/বিএস খতিয়ান ও এনআইডি রেকর্ড পরীক্ষণ। শূন্য এআই বিভ্রান্তি—প্রতিটি উত্তর ২৮টি সংবিধিবদ্ধ আইনি ধারার ভিত্তিতে সুনির্দিষ্ট।'
                       : 'Deterministic cross-parity examination for property deeds, collectorate khatians, and identity smart cards. Zero AI hallucination guaranteed.'}
                   </p>
+                </div>
+
+                {/* ── INTERACTIVE BENCHMARK BENCH (ONE-CLICK EXAMINATIONS) ── */}
+                <div className="rounded-2xl border border-border/80 bg-paper-dark/30 p-4 space-y-3 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-ink uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-brass animate-pulse" />
+                      1-Click Interactive Benchmark Dockets
+                    </span>
+                    <span className="text-[10px] font-mono text-ink-muted">Click to test pipeline live:</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage('Examine Saf Kabala Deed #4108/2023 signed on 15/08/2023 presented on 22/12/2023 under Section 23 of Registration Act 1908.')}
+                      className="p-3 rounded-xl border border-border bg-paper hover:border-brass hover:shadow-sm text-left transition-all group cursor-pointer"
+                    >
+                      <div className="text-[10px] font-mono font-bold text-green-deep">Deed Sec. 23 Check</div>
+                      <div className="text-xs font-bold text-ink group-hover:text-green-deep mt-0.5">4-Month Window</div>
+                      <div className="text-[10px] font-mono text-brass font-bold mt-1.5 flex items-center gap-1">Run Audit &rarr;</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage('Audit Khatian No. 341 against Deed Dag 412: check if vendor holds mutated title under SAT Act 1950.')}
+                      className="p-3 rounded-xl border border-border bg-paper hover:border-brass hover:shadow-sm text-left transition-all group cursor-pointer"
+                    >
+                      <div className="text-[10px] font-mono font-bold text-green-deep">RS/BS Khatian</div>
+                      <div className="text-xs font-bold text-ink group-hover:text-green-deep mt-0.5">Dag & Title Chain</div>
+                      <div className="text-[10px] font-mono text-brass font-bold mt-1.5 flex items-center gap-1">Run Audit &rarr;</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSendMessage('Validate Smart NID format for Vendor (10 digits) and Purchaser (17 digits) under Rule 3 of NID Rules 2010.')}
+                      className="p-3 rounded-xl border border-border bg-paper hover:border-brass hover:shadow-sm text-left transition-all group cursor-pointer"
+                    >
+                      <div className="text-[10px] font-mono font-bold text-green-deep">Rule 3 Smart NID</div>
+                      <div className="text-xs font-bold text-ink group-hover:text-green-deep mt-0.5">Digit Formats</div>
+                      <div className="text-[10px] font-mono text-brass font-bold mt-1.5 flex items-center gap-1">Run Audit &rarr;</div>
+                    </button>
+                  </div>
                 </div>
 
                 {/* 2x2 Interactive Modern Suggestion Cards */}

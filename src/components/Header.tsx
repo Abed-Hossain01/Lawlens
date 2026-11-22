@@ -18,7 +18,7 @@ const getReducedMotionServerSnapshot = () => false;
 
 export function Header() {
   const { lang, setLang } = useLang();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const pathname = usePathname();
 
   const isHome = pathname === '/';
@@ -134,13 +134,11 @@ export function Header() {
     }
   }, [mobileMenuOpen]);
 
-  // Nav link definitions (Modern Business Product)
+  // Nav link definitions (Explore goes to plans, removed AI Assistant)
   const navLinks = [
-    { id: 'explore', labelEn: 'Explore', labelBn: 'অনুসন্ধান', href: isHome ? '#explore' : '/#explore' },
+    { id: 'pricing', labelEn: 'Explore', labelBn: 'অনুসন্ধান', href: isHome ? '#pricing' : '/pricing' },
     { id: 'who-its-for', labelEn: 'Who it’s for', labelBn: 'কার জন্য', href: isHome ? '#who-its-for' : '/#who-its-for' },
     { id: 'citations', labelEn: 'Citations', labelBn: 'আইনি ধারা', href: isHome ? '#citations' : '/#citations' },
-    { id: 'pricing', labelEn: 'Plans', labelBn: 'পরিকল্পনা', href: isHome ? '#pricing' : '/pricing' },
-    { id: 'chat', labelEn: 'AI Assistant', labelBn: 'এআই সহকারী', href: '/chat' },
   ];
 
   // If on dedicated /chat page, Header is suppressed in favor of the chat page's single authoritative header
@@ -238,23 +236,33 @@ export function Header() {
               </button>
             </div>
 
-            {/* Sign in Option (Right side) */}
+            {/* Sign in / Sign out Options (Right side) */}
             {user ? (
-              <button
-                type="button"
-                onClick={() => setSignInModalOpen(true)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-paper-dark/70 hover:bg-paper-dark text-ink font-sans text-xs font-semibold transition-all shadow-2xs hover:border-brass/60 cursor-pointer"
-                title={`Signed in as ${user.name} (${user.chamber})`}
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                <span className="max-w-[110px] truncate">{user.name.replace('Advocate ', 'Adv. ')}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSignInModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-paper-dark/70 hover:bg-paper-dark text-ink font-sans text-xs font-semibold transition-all shadow-2xs hover:border-brass/60 cursor-pointer"
+                  title={`Signed in as ${user.name}`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                  <span className="max-w-[110px] truncate">{user.name.replace('Advocate ', 'Adv. ')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => signOut()}
+                  className="text-xs font-sans font-medium text-ink-muted hover:text-vermillion px-2 py-1 rounded-full hover:bg-paper-dark transition-colors cursor-pointer"
+                  title="Sign out of your account"
+                >
+                  {lang === 'bn' ? 'লগআউট' : 'Sign out'}
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
                 onClick={() => setSignInModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-paper hover:bg-paper-dark text-ink font-sans text-xs font-semibold transition-all shadow-2xs hover:border-brass/70 cursor-pointer"
-                title="Sign in to your chamber account"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-border bg-paper hover:bg-paper-dark text-ink font-sans text-xs font-semibold transition-all shadow-2xs hover:border-brass/70 cursor-pointer"
+                title="Sign in to your account"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
@@ -263,15 +271,6 @@ export function Header() {
                 <span>{lang === 'bn' ? 'লগইন' : 'Sign in'}</span>
               </button>
             )}
-
-            {/* Primary Filled Button: "Explore Nothi AI →" */}
-            <Link
-              href="/chat"
-              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-full font-sans text-xs font-semibold transition-all duration-150 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 focus-visible:ring-2 focus-visible:ring-brass focus-visible:ring-offset-2 focus-visible:outline-hidden cursor-pointer bg-green-deep text-paper hover:bg-green-mid group"
-            >
-              <span>{lang === 'bn' ? 'নথি এআই দেখুন' : 'Explore Nothi AI'}</span>
-              <span className="group-hover:translate-x-1 transition-transform">→</span>
-            </Link>
 
             {/* Mobile Hamburger Menu Button (<768px) */}
             <button
@@ -327,28 +326,44 @@ export function Header() {
               </nav>
             </div>
 
-            {/* Bottom Primary Button */}
+            {/* Bottom Actions */}
             <div className="pt-6 border-t border-border space-y-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  setSignInModalOpen(true);
-                }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-full border border-border bg-paper-dark text-ink font-sans text-xs font-semibold hover:bg-border transition-colors cursor-pointer"
-              >
-                <span>{user ? `Signed in as ${user.name}` : (lang === 'bn' ? 'চেম্বার লগইন (Sign in)' : 'Chamber Sign In')}</span>
-              </button>
+              {user ? (
+                <div className="space-y-2">
+                  <div className="p-3 rounded-xl bg-paper-dark/60 border border-border text-xs">
+                    <span className="text-ink-muted block text-[10px] uppercase font-mono">Signed in as</span>
+                    <span className="font-bold text-ink text-sm block">{user.name}</span>
+                    <span className="text-ink-muted text-xs font-mono">{user.email}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      signOut();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-full border border-vermillion/40 text-vermillion font-sans text-xs font-semibold hover:bg-vermillion/10 transition-colors cursor-pointer"
+                  >
+                    <span>{lang === 'bn' ? 'লগআউট' : 'Sign Out / Logout'}</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setSignInModalOpen(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-green-deep text-paper font-sans text-xs font-bold uppercase tracking-wider hover:bg-green-mid shadow-md transition-colors cursor-pointer"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                  <span>{lang === 'bn' ? 'লগইন করুন (Sign in)' : 'Sign In / Login'}</span>
+                </button>
+              )}
 
-              <Link
-                href="/chat"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-green-deep text-paper font-sans text-sm font-semibold hover:bg-green-mid shadow-md"
-              >
-                <span>{lang === 'bn' ? 'নথি এআই দেখুন →' : 'Explore Nothi AI →'}</span>
-              </Link>
-
-              <p className="text-center text-xs text-ink-muted font-sans">
+              <p className="text-center text-xs text-ink-muted font-sans pt-2">
                 Team Boron • Pointfex Land Intelligence
               </p>
             </div>
